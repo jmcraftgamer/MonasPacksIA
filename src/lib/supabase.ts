@@ -1,11 +1,38 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+let _supabase: SupabaseClient | null = null;
+let _supabaseAdmin: SupabaseClient | null = null;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+function getClient(): SupabaseClient {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+      { auth: { persistSession: false } }
+    );
+  }
+  return _supabase;
+}
 
-export const supabaseAdmin = createClient(
-  supabaseUrl,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey
-);
+function getAdminClient(): SupabaseClient {
+  if (!_supabaseAdmin) {
+    _supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+      { auth: { persistSession: false } }
+    );
+  }
+  return _supabaseAdmin;
+}
+
+export const supabase = new Proxy<SupabaseClient>({} as SupabaseClient, {
+  get(_, prop: string | symbol) {
+    return (getClient() as any)[prop];
+  },
+});
+
+export const supabaseAdmin = new Proxy<SupabaseClient>({} as SupabaseClient, {
+  get(_, prop: string | symbol) {
+    return (getAdminClient() as any)[prop];
+  },
+});
