@@ -1,0 +1,61 @@
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabase";
+
+export async function GET() {
+  const results: string[] = [];
+
+  const tables = [
+    `CREATE TABLE IF NOT EXISTS profiles (
+      id UUID PRIMARY KEY,
+      email TEXT,
+      nome TEXT,
+      plano TEXT DEFAULT 'gratuito',
+      downloads_gratis INTEGER DEFAULT 3,
+      criado_em TIMESTAMPTZ DEFAULT now(),
+      assinatura_inicio TIMESTAMPTZ,
+      assinatura_fim TIMESTAMPTZ
+    )`,
+    `CREATE TABLE IF NOT EXISTS produtos (
+      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+      nome TEXT NOT NULL,
+      descricao TEXT,
+      categoria TEXT NOT NULL,
+      subcategoria TEXT DEFAULT '',
+      tipo TEXT DEFAULT 'unico',
+      imagem TEXT DEFAULT '',
+      download_url TEXT DEFAULT '',
+      criado_em TIMESTAMPTZ DEFAULT now()
+    )`,
+    `CREATE TABLE IF NOT EXISTS arquivos (
+      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+      produto_id UUID REFERENCES produtos(id) ON DELETE CASCADE,
+      nome TEXT NOT NULL,
+      url TEXT NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS downloads (
+      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+      user_id UUID REFERENCES profiles(id),
+      produto_id UUID REFERENCES produtos(id),
+      criado_em TIMESTAMPTZ DEFAULT now()
+    )`,
+    `CREATE TABLE IF NOT EXISTS pagamentos (
+      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+      user_id UUID REFERENCES profiles(id),
+      valor DECIMAL(10,2) NOT NULL,
+      status TEXT DEFAULT 'pendente',
+      mes_ref DATE,
+      criado_em TIMESTAMPTZ DEFAULT now()
+    )`,
+  ];
+
+  for (const sql of tables) {
+    const { error } = await supabaseAdmin.rpc("exec_sql", { sql });
+    if (error) {
+      results.push(`Erro: ${error.message}`);
+    } else {
+      results.push(`OK`);
+    }
+  }
+
+  return NextResponse.json({ results, message: "Setup concluído. Verifique os resultados." });
+}
