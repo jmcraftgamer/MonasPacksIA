@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -59,12 +60,20 @@ export default function AdminPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">Dashboard Admin</h1>
-        <button
-          onClick={() => { localStorage.removeItem("admin_token"); router.push("/admin/login"); }}
-          className="text-sm text-zinc-500 hover:text-red-400 transition-colors"
-        >
-          Sair
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/gerar"
+            className="text-sm text-yellow hover:text-yellow/80 transition-colors"
+          >
+            Gerar Packs
+          </Link>
+          <button
+            onClick={() => { localStorage.removeItem("admin_token"); router.push("/admin/login"); }}
+            className="text-sm text-zinc-500 hover:text-red-400 transition-colors"
+          >
+            Sair
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
