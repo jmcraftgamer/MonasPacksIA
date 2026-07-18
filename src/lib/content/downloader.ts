@@ -137,18 +137,17 @@ async function searchKlipy(query: string, type: string, perPage: number, apiKey:
 
 async function searchEpidemic(query: string, type: string, perPage: number, apiKey: string): Promise<SearchResult[]> {
   try {
+    const headers = { Authorization: `Bearer ${apiKey}` };
     if (type === "sound_effect") {
-      const catRes = await fetch(`${EPIDEMIC_API}/sound-effects/categories`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
+      const catRes = await fetch(`${EPIDEMIC_API}/sound-effects/categories`, { headers });
+      if (!catRes.ok) { console.error(`Epidemic SFX categories: ${catRes.status} ${await catRes.text()}`); return []; }
       const catData = await catRes.json();
       const categories = catData.categories || catData.data || [];
       const results: SearchResult[] = [];
       for (const cat of categories.slice(0, 3)) {
         if (results.length >= perPage) break;
-        const res = await fetch(`${EPIDEMIC_API}/sound-effects/categories/${cat.id}/tracks?limit=${Math.min(perPage - results.length, 50)}`, {
-          headers: { Authorization: `Bearer ${apiKey}` },
-        });
+        const res = await fetch(`${EPIDEMIC_API}/sound-effects/categories/${cat.id}/tracks?limit=${Math.min(perPage - results.length, 50)}`, { headers });
+        if (!res.ok) continue;
         const data = await res.json();
         const tracks = data.tracks || data.data || [];
         for (const track of tracks) {
@@ -163,17 +162,20 @@ async function searchEpidemic(query: string, type: string, perPage: number, apiK
       }
       return results.filter((i) => i.url);
     }
-    const res = await fetch(`${EPIDEMIC_API}/tracks/search?term=${encodeURIComponent(query)}&limit=${Math.min(perPage, 60)}`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
+    const url = `${EPIDEMIC_API}/tracks/search?term=${encodeURIComponent(query)}&limit=${Math.min(perPage, 60)}`;
+    const res = await fetch(url, { headers });
+    if (!res.ok) { console.error(`Epidemic search ${res.status}: ${await res.text()}`); return []; }
     const data = await res.json();
-    return (data.tracks || []).map((item: any) => ({
-      url: item.preview_mp3 || item.download_url || item.url,
-      previewUrl: item.album_art_url || "",
+    const tracks = data.tracks || data.results || data.data || [];
+    console.error(`Epidemic search "${query}" => ${tracks.length} tracks`);
+    return tracks.map((item: any) => ({
+      url: item.preview_mp3 || item.download_url || item.url || item.preview_url,
+      previewUrl: item.album_art_url || item.image_url || "",
       origem: "epidemic",
       tipo: "audio" as const,
     })).filter((i: any) => i.url);
-  } catch {
+  } catch (e: any) {
+    console.error(`Epidemic error: ${e.message}`);
     return [];
   }
 }
@@ -250,17 +252,28 @@ function extractPNGUrls(html: string): string[] {
 
 export async function downloadFile(url: string, bucket: string, path: string): Promise<string | null> {
   try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "image/webp,image/png,image/gif,video/mp4,audio/mpeg,*/*",
+        "Referer": "https://klipy.com/",
+      },
+    });
+    if (!res.ok) {
+      console.error(`downloadFile ${url.slice(0, 60)}... => ${res.status}`);
+      return null;
+    }
     const buffer = Buffer.from(await res.arrayBuffer());
+    const contentType = res.headers.get("content-type") || "application/octet-stream";
     const { data } = await supabaseAdmin.storage.from(bucket).upload(path, buffer, {
-      contentType: res.headers.get("content-type") || "image/png",
+      contentType,
       upsert: true,
     });
     if (!data) return null;
     const { data: publicUrl } = supabaseAdmin.storage.from(bucket).getPublicUrl(data.path);
     return publicUrl.publicUrl;
-  } catch {
+  } catch (e: any) {
+    console.error(`downloadFile error: ${e.message}`);
     return null;
   }
 }
