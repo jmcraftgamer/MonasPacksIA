@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     }
 
     const jobId = uuidv4();
-    const job = { status: "iniciando", log: [], progress: 0 };
+    const job: { status: string; log: string[]; progress: number } = { status: "iniciando", log: [], progress: 0 };
     activeJobs.set(jobId, job);
 
     job.log.push(`[${new Date().toISOString()}] Iniciando geração de pack para: ${categoria}`);
@@ -69,6 +69,8 @@ async function processJob(jobId: string, categoria: string, quantidade: number, 
       const results = await searchContent(query, categoria, Math.ceil(quantidade / queries.length), {
         pexels: process.env.PEXELS_API_KEY,
         pixabay: process.env.PIXABAY_API_KEY,
+        klipy: process.env.KLIPY_API_KEY,
+        epidemic: process.env.EPIDEMIC_API_KEY,
       });
 
       allResults.push(...results);

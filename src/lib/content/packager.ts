@@ -1,4 +1,4 @@
-import archiver from "archiver";
+import { ZipArchive as Archiver } from "archiver";
 import { Readable } from "stream";
 import { supabaseAdmin } from "../supabase";
 import { v4 as uuidv4 } from "uuid";
@@ -20,7 +20,7 @@ export async function createPack(
 
   const chunks: Buffer[] = [];
 
-  const archive = archiver("zip", { zlib: { level: 9 } });
+  const archive = new Archiver({ zlib: { level: 9 } });
 
   archive.on("data", (chunk: Buffer) => chunks.push(chunk));
 

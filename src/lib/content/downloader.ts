@@ -1,7 +1,10 @@
 import { supabaseAdmin } from "../supabase";
 
+const KLIPPY_API = "https://api.klipy.com/v1";
 const PEXELS_API = "https://api.pexels.com/v1";
 const PIXABAY_API = "https://pixabay.com/api";
+const EPIDEMIC_API = "https://partner-content-api.epidemicsound.com";
+const MYINSTANTS_API = "https://myinstants-api.vercel.app";
 
 interface SearchResult {
   url: string;
@@ -14,14 +17,71 @@ export async function searchContent(
   query: string,
   categoria: string,
   quantidade: number,
-  apiKeys: { pexels?: string; pixabay?: string }
+  apiKeys: {
+    pexels?: string;
+    pixabay?: string;
+    klipy?: string;
+    epidemic?: string;
+  }
 ): Promise<SearchResult[]> {
   const resultados: SearchResult[] = [];
   const needed = quantidade;
 
+  if (apiKeys.klipy) {
+    if (categoria === "memes-video") {
+      const clips = await searchKlipy(query, "clips", needed, apiKeys.klipy);
+      resultados.push(...clips);
+      if (resultados.length < needed) {
+        const gifs = await searchKlipy(query, "gifs", needed - resultados.length, apiKeys.klipy);
+        resultados.push(...gifs);
+      }
+    } else if (categoria === "memes-imagem") {
+      const memes = await searchKlipy(query, "memes", needed, apiKeys.klipy);
+      resultados.push(...memes);
+      if (resultados.length < needed) {
+        const stickers = await searchKlipy(query, "stickers", needed - resultados.length, apiKeys.klipy);
+        resultados.push(...stickers);
+      }
+    } else if (categoria === "packs") {
+      const klipyTypes = ["clips", "gifs", "memes", "stickers"] as const;
+      for (const t of klipyTypes) {
+        if (resultados.length >= needed) break;
+        const items = await searchKlipy(query, t, needed - resultados.length, apiKeys.klipy);
+        resultados.push(...items);
+      }
+    }
+  }
+
+  if (apiKeys.epidemic) {
+    if (categoria === "musica") {
+      const tracks = await searchEpidemic(query, "track", needed - resultados.length, apiKeys.epidemic);
+      resultados.push(...tracks);
+    } else if (categoria === "efeitos") {
+      const sfx = await searchEpidemic(query, "sound_effect", needed - resultados.length, apiKeys.epidemic);
+      resultados.push(...sfx);
+    }
+  }
+
   if (apiKeys.pexels) {
-    const imgs = await searchPexels(query, needed, apiKeys.pexels);
-    resultados.push(...imgs);
+    const pexelsTipo = categoria === "memes-video" ? "video" : "photo";
+    try {
+      const res = await fetch(`${PEXELS_API}/search?query=${encodeURIComponent(query)}&per_page=${Math.min(needed - resultados.length, 80)}&type=${pexelsTipo}`, {
+        headers: { Authorization: apiKeys.pexels },
+      });
+      const data = await res.json();
+      const items = (data.photos || data.videos || []).map((p: any) => ({
+        url: p.src?.original || p.video_files?.[0]?.link,
+        previewUrl: p.src?.tiny || p.video_files?.[0]?.link,
+        origem: "pexels",
+        tipo: pexelsTipo === "video" ? "video" : "imagem",
+      })).filter((i: any) => i.url);
+      resultados.push(...items);
+    } catch {}
+  }
+
+  if (categoria === "efeitos" || categoria === "packs") {
+    const sounds = await searchMyInstants(query, needed - resultados.length);
+    resultados.push(...sounds);
   }
 
   if (apiKeys.pixabay) {
@@ -30,7 +90,7 @@ export async function searchContent(
     resultados.push(...pix);
   }
 
-  if (resultados.length < needed) {
+  if (resultados.length < needed && (categoria === "memes-imagem" || categoria === "packs")) {
     const scraped = await scrapeTransparentPNG(query, needed - resultados.length);
     resultados.push(...scraped);
   }
@@ -38,18 +98,56 @@ export async function searchContent(
   return resultados.slice(0, quantidade);
 }
 
-async function searchPexels(query: string, perPage: number, apiKey: string): Promise<SearchResult[]> {
+async function searchKlipy(query: string, type: string, perPage: number, apiKey: string): Promise<SearchResult[]> {
   try {
-    const res = await fetch(`${PEXELS_API}/search?query=${encodeURIComponent(query)}&per_page=${Math.min(perPage, 80)}`, {
-      headers: { Authorization: apiKey },
+    const res = await fetch(`${KLIPPY_API}/search`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({ query, type, per_page: Math.min(perPage, 50) }),
     });
     const data = await res.json();
-    return (data.photos || []).map((p: any) => ({
-      url: p.src.original,
-      previewUrl: p.src.tiny,
-      origem: "pexels",
-      tipo: "imagem" as const,
-    }));
+    return (data.results || []).map((item: any) => ({
+      url: item.url || item.media_url || item.download_url,
+      previewUrl: item.preview_url || item.thumbnail_url || item.url,
+      origem: "klipy",
+      tipo: (type === "gifs" || type === "stickers" || type === "memes") ? "imagem" as const : "video" as const,
+    })).filter((i: any) => i.url);
+  } catch {
+    return [];
+  }
+}
+
+async function searchEpidemic(query: string, type: string, perPage: number, apiKey: string): Promise<SearchResult[]> {
+  try {
+    const endpoint = type === "sound_effect"
+      ? `${EPIDEMIC_API}/search/sound-effects`
+      : `${EPIDEMIC_API}/search/tracks`;
+    const res = await fetch(`${endpoint}?query=${encodeURIComponent(query)}&page_size=${Math.min(perPage, 50)}`, {
+      headers: { Authorization: `Api-Key ${apiKey}` },
+    });
+    const data = await res.json();
+    const items = type === "sound_effect" ? (data.sound_effects || data.results || []) : (data.tracks || data.results || []);
+    return items.map((item: any) => ({
+      url: item.preview_mp3 || item.preview_url || item.download_url || item.url,
+      previewUrl: item.preview_url || item.cover_url || "",
+      origem: "epidemic",
+      tipo: "audio" as const,
+    })).filter((i: any) => i.url);
+  } catch {
+    return [];
+  }
+}
+
+async function searchMyInstants(query: string, perPage: number): Promise<SearchResult[]> {
+  try {
+    const res = await fetch(`${MYINSTANTS_API}/search?q=${encodeURIComponent(query)}&limit=${Math.min(perPage, 30)}`);
+    const data = await res.json();
+    return (data.sounds || data.results || []).map((s: any) => ({
+      url: s.audio_url || s.mp3 || s.url,
+      previewUrl: s.image_url || s.thumbnail || "",
+      origem: "myinstants",
+      tipo: "audio" as const,
+    })).filter((i: any) => i.url);
   } catch {
     return [];
   }
