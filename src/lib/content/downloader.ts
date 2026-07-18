@@ -246,31 +246,35 @@ function extractPNGUrls(html: string): string[] {
   return urls.slice(0, 20);
 }
 
-export async function downloadFile(url: string, bucket: string, path: string): Promise<string | null> {
+export async function downloadFile(url: string, bucket: string, path: string): Promise<{ url: string | null; error?: string }> {
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
     const res = await fetch(url, {
+      signal: controller.signal,
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         "Accept": "image/webp,image/png,image/gif,video/mp4,audio/mpeg,*/*",
         "Referer": "https://klipy.com/",
       },
     });
+    clearTimeout(timeout);
     if (!res.ok) {
-      console.error(`downloadFile ${url.slice(0, 60)}... => ${res.status}`);
-      return null;
+      return { url: null, error: `HTTP ${res.status} ao baixar` };
     }
     const buffer = Buffer.from(await res.arrayBuffer());
     const contentType = res.headers.get("content-type") || "application/octet-stream";
-    const { data } = await supabaseAdmin.storage.from(bucket).upload(path, buffer, {
+    const { data, error } = await supabaseAdmin.storage.from(bucket).upload(path, buffer, {
       contentType,
       upsert: true,
     });
-    if (!data) return null;
+    if (error || !data) {
+      return { url: null, error: `Upload: ${error?.message || "sem dados"}` };
+    }
     const { data: publicUrl } = supabaseAdmin.storage.from(bucket).getPublicUrl(data.path);
-    return publicUrl.publicUrl;
+    return { url: publicUrl.publicUrl };
   } catch (e: any) {
-    console.error(`downloadFile error: ${e.message}`);
-    return null;
+    return { url: null, error: `Exceção: ${e.message}` };
   }
 }
 

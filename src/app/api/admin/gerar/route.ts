@@ -96,17 +96,20 @@ async function processJob(jobId: string, categoria: string, quantidade: number, 
       const ext = item.url.split(".").pop()?.split("?")[0] || "png";
       const fileName = `${jobId}/${categoria}/${i}-${Date.now()}.${ext}`;
 
-      const url = await downloadFile(item.url, "conteudo", fileName);
+      const result = await downloadFile(item.url, "conteudo", fileName);
 
-      if (url) {
+      if (result.url) {
         sucessos++;
         downloadedItems.push({
           nome: extractNameFromUrl(item.url),
-          url,
+          url: result.url,
           tipo: item.tipo,
         });
       } else {
         erros++;
+        if (erros <= 10) {
+          job.log.push(`[${new Date().toISOString()}] Erro #${i}: ${result.error || "desconhecido"} | ${item.url.slice(0, 60)}`);
+        }
       }
 
       job.progress = 30 + Math.round(((i + 1) / quantidade) * 40);
