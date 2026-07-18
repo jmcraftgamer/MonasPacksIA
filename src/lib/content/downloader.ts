@@ -39,14 +39,14 @@ export async function searchContent(
         resultados.push(...gifs);
       }
     } else if (categoria === "memes-imagem") {
-      const memes = await searchKlipy(query, "memes", needed, apiKeys.klipy);
-      resultados.push(...memes);
+      const gifs = await searchKlipy(query, "gifs", needed, apiKeys.klipy);
+      resultados.push(...gifs);
       if (resultados.length < needed) {
         const stickers = await searchKlipy(query, "stickers", needed - resultados.length, apiKeys.klipy);
         resultados.push(...stickers);
       }
     } else if (categoria === "packs") {
-      const klipyTypes = ["clips", "gifs", "memes", "stickers"] as const;
+      const klipyTypes = ["clips", "gifs", "stickers"] as const;
       for (const t of klipyTypes) {
         if (resultados.length >= needed) break;
         const items = await searchKlipy(query, t, needed - resultados.length, apiKeys.klipy);
