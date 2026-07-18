@@ -1,6 +1,9 @@
 import { supabaseAdmin } from "../supabase";
+import { KlipyClient } from "klipy-js";
 
-const KLIPPY_API = "https://api.klipy.com/v1";
+function getKlipyClient(apiKey: string): KlipyClient {
+  return new KlipyClient({ apiKey });
+}
 const PEXELS_API = "https://api.pexels.com/v1";
 const PIXABAY_API = "https://pixabay.com/api";
 const EPIDEMIC_API = "https://partner-content-api.epidemicsound.com";
@@ -100,18 +103,33 @@ export async function searchContent(
 
 async function searchKlipy(query: string, type: string, perPage: number, apiKey: string): Promise<SearchResult[]> {
   try {
-    const res = await fetch(`${KLIPPY_API}/search`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({ query, type, per_page: Math.min(perPage, 50) }),
-    });
-    const data = await res.json();
-    return (data.results || []).map((item: any) => ({
-      url: item.url || item.media_url || item.download_url,
-      previewUrl: item.preview_url || item.thumbnail_url || item.url,
-      origem: "klipy",
-      tipo: (type === "gifs" || type === "stickers" || type === "memes") ? "imagem" as const : "video" as const,
-    })).filter((i: any) => i.url);
+    const client = getKlipyClient(apiKey);
+    let results: any[];
+    if (type === "clips") {
+      const page = await client.clips.search({ q: query, perPage: Math.min(perPage, 50) });
+      results = (page.data || []).map((item: any) => ({
+        url: item.file?.mp4 || item.url,
+        previewUrl: item.file?.gif || item.url,
+        origem: "klipy",
+        tipo: "video" as const,
+      }));
+    } else {
+      const contentTypes: Record<string, "gifs" | "stickers" | "memes"> = {
+        gifs: "gifs",
+        stickers: "stickers",
+        memes: "memes",
+      };
+      const mediaType = contentTypes[type] || "gifs";
+      const clientMethod = client[mediaType] as any;
+      const page = await clientMethod.search({ q: query, perPage: Math.min(perPage, 50) });
+      results = (page.data || []).map((item: any) => ({
+        url: item.file?.hd?.url || item.file?.md?.url || item.file?.sm?.url,
+        previewUrl: item.file?.sm?.url || item.file?.xs?.url || item.blur_preview || "",
+        origem: "klipy",
+        tipo: "imagem" as const,
+      }));
+    }
+    return results.filter((i: any) => i.url);
   } catch {
     return [];
   }
