@@ -6,7 +6,7 @@ function getKlipyClient(apiKey: string): KlipyClient {
 }
 const PEXELS_API = "https://api.pexels.com/v1";
 const PIXABAY_API = "https://pixabay.com/api";
-const EPIDEMIC_API = "https://partner-content-api.epidemicsound.com";
+const EPIDEMIC_API = "https://partner-content-api.epidemicsound.com/v0";
 const MYINSTANTS_API = "https://myinstants-api.vercel.app";
 
 interface SearchResult {
@@ -137,17 +137,39 @@ async function searchKlipy(query: string, type: string, perPage: number, apiKey:
 
 async function searchEpidemic(query: string, type: string, perPage: number, apiKey: string): Promise<SearchResult[]> {
   try {
-    const endpoint = type === "sound_effect"
-      ? `${EPIDEMIC_API}/search/sound-effects`
-      : `${EPIDEMIC_API}/search/tracks`;
-    const res = await fetch(`${endpoint}?query=${encodeURIComponent(query)}&page_size=${Math.min(perPage, 50)}`, {
-      headers: { Authorization: `Api-Key ${apiKey}` },
+    if (type === "sound_effect") {
+      const catRes = await fetch(`${EPIDEMIC_API}/sound-effects/categories`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+      const catData = await catRes.json();
+      const categories = catData.categories || catData.data || [];
+      const results: SearchResult[] = [];
+      for (const cat of categories.slice(0, 3)) {
+        if (results.length >= perPage) break;
+        const res = await fetch(`${EPIDEMIC_API}/sound-effects/categories/${cat.id}/tracks?limit=${Math.min(perPage - results.length, 50)}`, {
+          headers: { Authorization: `Bearer ${apiKey}` },
+        });
+        const data = await res.json();
+        const tracks = data.tracks || data.data || [];
+        for (const track of tracks) {
+          if (results.length >= perPage) break;
+          results.push({
+            url: track.preview_mp3 || track.download_url || track.url,
+            previewUrl: "",
+            origem: "epidemic",
+            tipo: "audio" as const,
+          });
+        }
+      }
+      return results.filter((i) => i.url);
+    }
+    const res = await fetch(`${EPIDEMIC_API}/tracks/search?term=${encodeURIComponent(query)}&limit=${Math.min(perPage, 60)}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
     });
     const data = await res.json();
-    const items = type === "sound_effect" ? (data.sound_effects || data.results || []) : (data.tracks || data.results || []);
-    return items.map((item: any) => ({
-      url: item.preview_mp3 || item.preview_url || item.download_url || item.url,
-      previewUrl: item.preview_url || item.cover_url || "",
+    return (data.tracks || []).map((item: any) => ({
+      url: item.preview_mp3 || item.download_url || item.url,
+      previewUrl: item.album_art_url || "",
       origem: "epidemic",
       tipo: "audio" as const,
     })).filter((i: any) => i.url);
