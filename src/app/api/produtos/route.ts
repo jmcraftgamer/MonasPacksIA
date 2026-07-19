@@ -1,20 +1,19 @@
 import { NextResponse } from "next/server";
-import { produtos } from "@/data/produtos";
+import { supabaseAdmin } from "@/lib/supabase";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const categoria = searchParams.get("categoria");
   const tipo = searchParams.get("tipo");
 
-  let resultado = [...produtos];
+  let query = supabaseAdmin.from("produtos").select("*");
 
-  if (categoria) {
-    resultado = resultado.filter((p) => p.categoria === categoria);
-  }
+  if (categoria) query = query.eq("categoria", categoria);
+  if (tipo) query = query.eq("tipo", tipo);
 
-  if (tipo) {
-    resultado = resultado.filter((p) => p.tipo === tipo);
-  }
+  const { data: resultado, error } = await query;
 
-  return NextResponse.json(resultado);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  return NextResponse.json(resultado || []);
 }

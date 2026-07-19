@@ -20,7 +20,7 @@ export async function createPack(
 
   const chunks: Buffer[] = [];
 
-  const archive = new Archiver({ zlib: { level: 9 } });
+  const archive = new Archiver({ zlib: { level: 1 } });
 
   archive.on("data", (chunk: Buffer) => chunks.push(chunk));
 

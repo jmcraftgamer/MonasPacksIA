@@ -1,10 +1,11 @@
-import { produtos } from "@/data/produtos";
 import CategorySection from "@/components/CategorySection";
+import { supabase } from "@/lib/supabase";
 import { categorias } from "@/data/produtos";
 
-export default function EfeitosPage() {
+export default async function EfeitosPage() {
   const cat = categorias.find((c) => c.id === "efeitos")!;
-  const filtrados = produtos.filter((p) => p.categoria === "efeitos");
+  const { data: produtos } = await supabase.from("produtos").select("*").eq("categoria", "efeitos");
+  const filtrados = produtos || [];
   const packs = filtrados.filter((p) => p.tipo === "pack");
   const itens = filtrados.filter((p) => p.tipo === "unico");
 

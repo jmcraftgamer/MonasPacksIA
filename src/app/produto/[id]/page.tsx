@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { produtos } from "@/data/produtos";
+import { supabase } from "@/lib/supabase";
 import ProductDetail from "./ProductDetail";
 
 interface Props {
@@ -8,7 +8,7 @@ interface Props {
 
 export default async function ProdutoPage({ params }: Props) {
   const { id } = await params;
-  const produto = produtos.find((p) => p.id === id);
+  const { data: produto } = await supabase.from("produtos").select("*").eq("id", id).single();
 
   if (!produto) notFound();
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { produtos } from "@/data/produtos";
+import { supabaseAdmin } from "@/lib/supabase";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -7,9 +7,9 @@ interface Props {
 
 export async function GET(_request: Request, { params }: Props) {
   const { id } = await params;
-  const produto = produtos.find((p) => p.id === id);
+  const { data: produto, error } = await supabaseAdmin.from("produtos").select("*").eq("id", id).single();
 
-  if (!produto) {
+  if (error || !produto) {
     return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 });
   }
 
