@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { supabaseAdmin } from "@/lib/supabase";
+import { getProduto } from "@/lib/content/produtos";
 import ProductDetail from "./ProductDetail";
 
 interface Props {
@@ -8,7 +8,7 @@ interface Props {
 
 export default async function ProdutoPage({ params }: Props) {
   const { id } = await params;
-  const { data: produto } = await supabaseAdmin.from("produtos").select("*").eq("id", id).single();
+  const produto = await getProduto(id);
 
   if (!produto) notFound();
 
