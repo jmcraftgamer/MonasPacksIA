@@ -117,8 +117,8 @@ async function processJob(jobId: string, categoria: string, quantidade: number, 
 
     job.log.push(`[${new Date().toISOString()}] Downloads: ${sucessos} sucesso, ${erros} erros`);
 
-    if (downloadedItems.length < 3) {
-      job.log.push(`[${new Date().toISOString()}] Poucos itens baixados. Abortando.`);
+    if (downloadedItems.length < 1) {
+      job.log.push(`[${new Date().toISOString()}] Nenhum item baixado. Abortando.`);
       job.status = "erro";
       return;
     }

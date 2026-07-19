@@ -16,7 +16,7 @@ export async function createPack(
   subcategoria: string,
   itens: PackItem[]
 ): Promise<{ packId: string; zipUrl: string } | null> {
-  if (itens.length < 3) return null;
+  if (itens.length < 1) return null;
 
   const chunks: Buffer[] = [];
 
