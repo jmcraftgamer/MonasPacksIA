@@ -142,7 +142,12 @@ async function processJob(jobId: string, categoria: string, quantidade: number, 
     );
 
     if (!pack) {
-      job.log.push(`[${new Date().toISOString()}] Erro ao criar pack!`);
+      job.log.push(`[${new Date().toISOString()}] Erro ao criar pack (retornou null)!`);
+      job.status = "erro";
+      return;
+    }
+    if (pack.erro) {
+      job.log.push(`[${new Date().toISOString()}] Erro ao criar pack: ${pack.erro}`);
       job.status = "erro";
       return;
     }

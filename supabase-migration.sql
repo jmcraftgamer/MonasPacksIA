@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS produtos (
   criado_em TIMESTAMPTZ DEFAULT now()
 );
 
+ALTER TABLE produtos ADD COLUMN IF NOT EXISTS imagem TEXT DEFAULT '';
+
 -- Tabela de arquivos de packs
 CREATE TABLE IF NOT EXISTS arquivos (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

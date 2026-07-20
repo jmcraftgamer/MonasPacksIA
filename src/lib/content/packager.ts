@@ -15,7 +15,7 @@ export async function createPack(
   categoria: string,
   subcategoria: string,
   itens: PackItem[]
-): Promise<{ packId: string; zipUrl: string } | null> {
+): Promise<{ packId: string; zipUrl: string; erro?: string } | null> {
   if (itens.length < 1) return null;
 
   const chunks: Buffer[] = [];
@@ -66,25 +66,34 @@ export async function createPack(
       upsert: true,
     });
 
-  if (uploadError || !uploadData) return null;
+  if (uploadError || !uploadData) return { packId, zipUrl: "", erro: `Upload zip: ${uploadError?.message || "sem dados"}` };
 
   const { data: publicUrlData } = supabaseAdmin.storage.from("conteudo").getPublicUrl(zipPath);
 
   const primeiraImagem = validDownloads.length > 0 && ["gif", "png", "jpg", "jpeg", "webp"].includes((validDownloads[0].name.split(".").pop() || "").toLowerCase())
     ? itens[0].url : "";
 
-  const { error: dbError } = await supabaseAdmin.from("produtos").insert({
-    id: packId,
-    nome,
-    descricao,
-    categoria,
-    subcategoria,
-    tipo: "pack",
-    imagem: primeiraImagem,
-    download_url: publicUrlData.publicUrl,
-  });
+  let dbError: any;
+  try {
+    if (primeiraImagem) {
+      const result = await supabaseAdmin.from("produtos").insert({
+        id: packId, nome, descricao, categoria, subcategoria, tipo: "pack",
+        imagem: primeiraImagem, download_url: publicUrlData.publicUrl,
+      });
+      dbError = result.error;
+    }
+    if (!primeiraImagem || dbError) {
+      const result = await supabaseAdmin.from("produtos").insert({
+        id: packId, nome, descricao, categoria, subcategoria, tipo: "pack",
+        download_url: publicUrlData.publicUrl,
+      });
+      dbError = result.error;
+    }
+  } catch (e: any) {
+    return { packId, zipUrl: "", erro: `DB pack insert exception: ${e.message}` };
+  }
 
-  if (dbError) return null;
+  if (dbError) return { packId, zipUrl: "", erro: `DB pack insert: ${dbError.message}` };
 
   for (const item of validDownloads) {
     const itemId = uuidv4();
@@ -95,25 +104,29 @@ export async function createPack(
       .from("conteudo")
       .upload(itemPath, item.buffer, { upsert: true });
 
-    if (!itemUploadError) {
-      const { data: publicUrl } = supabaseAdmin.storage.from("conteudo").getPublicUrl(itemPath);
-
-      await supabaseAdmin.from("produtos").insert({
-        id: itemId,
-        nome: item.name.replace(/\.[^.]+$/, ""),
-        descricao: `Item do pack ${nome}`,
-        categoria,
-        subcategoria,
-        tipo: "unico",
-        download_url: publicUrl.publicUrl,
-      });
-
-      await supabaseAdmin.from("arquivos").insert({
-        produto_id: packId,
-        nome: item.name,
-        url: publicUrl.publicUrl,
-      });
+    if (itemUploadError) {
+      continue;
     }
+
+    const { data: publicUrl } = supabaseAdmin.storage.from("conteudo").getPublicUrl(itemPath);
+
+    const { error: itemDbError } = await supabaseAdmin.from("produtos").insert({
+      id: itemId,
+      nome: item.name.replace(/\.[^.]+$/, ""),
+      descricao: `Item do pack ${nome}`,
+      categoria,
+      subcategoria,
+      tipo: "unico",
+      download_url: publicUrl.publicUrl,
+    });
+
+    if (itemDbError) continue;
+
+    await supabaseAdmin.from("arquivos").insert({
+      produto_id: packId,
+      nome: item.name,
+      url: publicUrl.publicUrl,
+    });
   }
 
   return { packId, zipUrl: publicUrlData.publicUrl };
