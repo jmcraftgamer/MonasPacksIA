@@ -31,7 +31,12 @@ export default function RegistrarPage() {
       return;
     }
 
-    router.push("/login?registrado=true");
+    if (data.session) {
+      localStorage.setItem("session", JSON.stringify(data.session));
+      router.push("/");
+    } else {
+      router.push("/login?registrado=true");
+    }
   };
 
   return (

@@ -19,18 +19,7 @@ export default function DownloadButton({ produtoId, label = "Download" }: Props)
     setDownloading(true);
     setProgress(0);
 
-    const sessionStr = localStorage.getItem("session");
-    if (!sessionStr) {
-      setErro("Faça login para baixar");
-      setDownloading(false);
-      return;
-    }
-
-    const session = JSON.parse(sessionStr);
-
-    const res = await fetch(`/api/download/${produtoId}`, {
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    });
+    const res = await fetch(`/api/download/${produtoId}`);
 
     const data = await res.json();
 

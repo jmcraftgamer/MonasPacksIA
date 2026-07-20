@@ -70,6 +70,9 @@ export async function createPack(
 
   const { data: publicUrlData } = supabaseAdmin.storage.from("conteudo").getPublicUrl(zipPath);
 
+  const primeiraImagem = validDownloads.length > 0 && ["gif", "png", "jpg", "jpeg", "webp"].includes((validDownloads[0].name.split(".").pop() || "").toLowerCase())
+    ? itens[0].url : "";
+
   const { error: dbError } = await supabaseAdmin.from("produtos").insert({
     id: packId,
     nome,
@@ -77,6 +80,7 @@ export async function createPack(
     categoria,
     subcategoria,
     tipo: "pack",
+    imagem: primeiraImagem,
     download_url: publicUrlData.publicUrl,
   });
 

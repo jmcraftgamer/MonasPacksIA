@@ -28,7 +28,20 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.json({ success: true, user: authData.user });
+    const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (sessionError || !sessionData.session) {
+      return NextResponse.json({ success: true, user: authData.user });
+    }
+
+    return NextResponse.json({
+      success: true,
+      user: sessionData.user,
+      session: sessionData.session,
+    });
   } catch {
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 });
   }

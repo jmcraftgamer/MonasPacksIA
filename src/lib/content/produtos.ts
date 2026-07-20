@@ -10,7 +10,20 @@ export async function getProdutos(categoria?: string): Promise<Produto[]> {
 
 export async function getProduto(id: string): Promise<Produto | null> {
   const { data } = await supabaseAdmin.from("produtos").select("*").eq("id", id).single();
-  return data ? formatProduto(data) : null;
+  if (!data) return null;
+  const produto = formatProduto(data);
+
+  if (produto.tipo === "pack") {
+    const { data: arquivos } = await supabaseAdmin
+      .from("arquivos")
+      .select("*")
+      .eq("produto_id", id);
+    if (arquivos && arquivos.length > 0) {
+      produto.arquivos = arquivos.map((a: any) => ({ nome: a.nome, url: a.url }));
+    }
+  }
+
+  return produto;
 }
 
 function formatProduto(raw: any): Produto {

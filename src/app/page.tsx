@@ -1,10 +1,16 @@
 import Link from "next/link";
 import { categorias } from "@/data/produtos";
+import { getProdutos } from "@/lib/content/produtos";
+import BannerCarousel from "@/components/BannerCarousel";
 
-export default function Home() {
+export default async function Home() {
+  const produtos = await getProdutos();
+
   return (
     <div className="space-y-12">
-      <section className="text-center py-8 sm:py-16">
+      <BannerCarousel produtos={produtos} />
+
+      <section className="text-center">
         <h1 className="text-3xl sm:text-5xl font-bold text-white mb-3">
           MonaPacks<span className="text-yellow">IA</span>
         </h1>

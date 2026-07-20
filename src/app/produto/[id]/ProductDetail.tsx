@@ -24,7 +24,13 @@ export default function ProductDetail({ produto }: Props) {
 
       <div className="rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/50">
         <div className="aspect-[21/9] relative bg-zinc-800">
-          {isMusic ? (
+          {produto.imagem ? (
+            <img
+              src={produto.imagem}
+              alt={produto.nome}
+              className="w-full h-full object-cover"
+            />
+          ) : isMusic ? (
             <div className="absolute inset-0 flex items-center justify-center">
               <AudioVisualizer />
             </div>
@@ -72,12 +78,23 @@ export default function ProductDetail({ produto }: Props) {
                 className="flex items-center justify-between p-3 rounded-xl bg-zinc-900 border border-zinc-800"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center">
-                    <span className="text-sm">{isMusic ? "🎵" : "📄"}</span>
+                  <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center overflow-hidden">
+                    {["gif", "png", "jpg", "jpeg", "webp"].includes((arquivo.nome.split(".").pop() || "").toLowerCase()) ? (
+                      <img src={arquivo.url} alt={arquivo.nome} className="w-8 h-8 object-cover" />
+                    ) : (
+                      <span className="text-sm">{isMusic ? "🎵" : "📄"}</span>
+                    )}
                   </div>
-                  <span className="text-sm text-zinc-300">{arquivo.nome}</span>
+                  <span className="text-sm text-zinc-300 truncate">{arquivo.nome}</span>
                 </div>
-                <DownloadButton produtoId={produto.id} label="Item" />
+                <a
+                  href={arquivo.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 text-xs bg-yellow text-black font-medium rounded-lg hover:bg-yellow/90 transition-colors"
+                >
+                  Baixar
+                </a>
               </div>
             ))}
           </div>
