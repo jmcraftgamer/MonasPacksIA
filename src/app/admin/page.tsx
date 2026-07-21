@@ -62,10 +62,10 @@ export default function AdminPage() {
         <h1 className="text-2xl font-bold text-white">Dashboard Admin</h1>
         <div className="flex items-center gap-3">
           <Link
-            href="/admin/gerar"
+            href="/admin/sync"
             className="text-sm text-yellow hover:text-yellow/80 transition-colors"
           >
-            Gerar Packs
+            Sincronizar
           </Link>
           <button
             onClick={() => { localStorage.removeItem("admin_token"); router.push("/admin/login"); }}
