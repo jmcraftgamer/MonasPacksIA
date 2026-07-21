@@ -38,7 +38,7 @@ async function populateCategory(categoria: string) {
   const queries = getCategoryQueries(categoria);
   for (const query of queries) {
     try {
-      const results = await searchContent(query, categoria, 200, {
+      const results = await searchContent(query, categoria, 500, {
         pexels: process.env.PEXELS_API_KEY,
         pixabay: process.env.PIXABAY_API_KEY,
         klipy: process.env.KLIPY_API_KEY,
