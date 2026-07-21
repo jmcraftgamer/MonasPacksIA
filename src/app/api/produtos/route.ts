@@ -3,12 +3,10 @@ import { getProdutos } from "@/lib/content/produtos";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const categoria = searchParams.get("categoria");
-  const tipo = searchParams.get("tipo");
+  const categoria = searchParams.get("categoria") || "";
+  const offset = Number(searchParams.get("offset")) || 0;
+  const limit = Number(searchParams.get("limit")) || 60;
 
-  let produtos = await getProdutos(categoria || undefined);
-
-  if (tipo) produtos = produtos.filter((p) => p.tipo === tipo);
-
-  return NextResponse.json(produtos);
+  const produtos = await getProdutos(categoria, limit, offset);
+  return NextResponse.json({ produtos });
 }

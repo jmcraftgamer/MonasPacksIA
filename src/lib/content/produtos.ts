@@ -1,11 +1,16 @@
 import { Produto } from "@/types";
 import { supabaseAdmin } from "@/lib/supabase";
 
-export async function getProdutos(categoria?: string): Promise<Produto[]> {
-  let query = supabaseAdmin.from("produtos").select("*");
+export async function getProdutos(categoria?: string, limit = 200, offset = 0): Promise<Produto[]> {
+  let query = supabaseAdmin.from("produtos").select("*").order("criado_em", { ascending: false });
   if (categoria) query = query.eq("categoria", categoria);
-  const { data } = await query;
+  const { data } = await query.range(offset, offset + limit - 1);
   return (data || []).map(formatProduto);
+}
+
+export async function getProdutosCount(categoria: string): Promise<number> {
+  const { count } = await supabaseAdmin.from("produtos").select("*", { count: "exact", head: true }).eq("categoria", categoria);
+  return count || 0;
 }
 
 export async function getProduto(id: string): Promise<Produto | null> {
