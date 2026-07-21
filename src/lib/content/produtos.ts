@@ -3,19 +3,25 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { searchContent, getCategoryQueries, extractNameFromUrl } from "./downloader";
 import { v4 as uuidv4 } from "uuid";
 
-export async function getProdutos(categoria?: string): Promise<Produto[]> {
-  let query = supabaseAdmin.from("produtos").select("*");
-  if (categoria) query = query.eq("categoria", categoria);
-  const { data } = await query;
-  const produtos = (data || []).map(formatProduto);
+const CATEGORIAS = ["musica", "memes-video", "memes-imagem", "efeitos", "packs"];
 
-  if (categoria && produtos.length < 5) {
-    await populateCategory(categoria);
-    const { data: newData } = await supabaseAdmin.from("produtos").select("*").eq("categoria", categoria);
-    return (newData || []).map(formatProduto);
+export async function getProdutos(categoria?: string): Promise<Produto[]> {
+  if (!categoria) {
+    for (const cat of CATEGORIAS) {
+      const { count } = await supabaseAdmin.from("produtos").select("*", { count: "exact", head: true }).eq("categoria", cat);
+      if (count !== null && count < 100) await populateCategory(cat);
+    }
+    const { data } = await supabaseAdmin.from("produtos").select("*");
+    return (data || []).map(formatProduto);
   }
 
-  return produtos;
+  const { count } = await supabaseAdmin.from("produtos").select("*", { count: "exact", head: true }).eq("categoria", categoria);
+  if (count !== null && count < 100) {
+    await populateCategory(categoria);
+  }
+
+  const { data } = await supabaseAdmin.from("produtos").select("*").eq("categoria", categoria);
+  return (data || []).map(formatProduto);
 }
 
 async function populateCategory(categoria: string) {
