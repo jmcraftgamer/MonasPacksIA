@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Produto } from "@/types";
+import { getImageUrl } from "@/lib/image";
 
 interface Props {
   produtos: Produto[];
@@ -34,7 +35,7 @@ export default function BannerCarousel({ produtos }: Props) {
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent z-10" />
           {prod.imagem ? (
             <img
-              src={prod.imagem}
+              src={getImageUrl(prod.imagem)}
               alt={prod.nome}
               className="w-full h-full object-cover"
               loading={i === 0 ? "eager" : "lazy"}

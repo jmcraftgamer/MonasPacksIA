@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import { Produto } from "@/types";
 import Link from "next/link";
+import { getImageUrl } from "@/lib/image";
 
 interface Props {
   produto: Produto;
@@ -65,7 +66,7 @@ export default function ProductCard({ produto }: Props) {
             <video
               ref={videoRef}
               src={videoUrl}
-              poster={produto.imagem}
+              poster={getImageUrl(produto.imagem)}
               className={`w-full h-full object-cover transition-opacity ${loaded ? "opacity-100" : "opacity-0"}`}
               playsInline
               muted
@@ -74,7 +75,7 @@ export default function ProductCard({ produto }: Props) {
             />
           ) : visible && hasCover ? (
             <img
-              src={produto.imagem}
+              src={getImageUrl(produto.imagem)}
               alt={produto.nome}
               className={`w-full h-full object-cover transition-opacity ${loaded ? "opacity-100" : "opacity-0"}`}
               loading="lazy"

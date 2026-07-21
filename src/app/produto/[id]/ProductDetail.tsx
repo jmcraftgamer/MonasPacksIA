@@ -6,6 +6,7 @@ import AudioVisualizer from "@/components/AudioVisualizer";
 import DownloadButton from "@/components/DownloadButton";
 import Carousel from "@/components/Carousel";
 import Link from "next/link";
+import { getImageUrl } from "@/lib/image";
 
 interface Props {
   produto: Produto;
@@ -46,7 +47,7 @@ export default function ProductDetail({ produto }: Props) {
               <video
                 ref={videoRef}
                 src={produto.downloadUrl}
-                poster={produto.imagem}
+                poster={getImageUrl(produto.imagem)}
                 className="w-full h-full object-cover"
                 playsInline
                 muted
@@ -66,7 +67,7 @@ export default function ProductDetail({ produto }: Props) {
             </div>
           ) : (isImage || (!isMusic && produto.imagem)) ? (
             <img
-              src={produto.imagem}
+              src={getImageUrl(produto.imagem)}
               alt={produto.nome}
               className="w-full h-full object-cover"
             />
@@ -120,7 +121,7 @@ export default function ProductDetail({ produto }: Props) {
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center overflow-hidden">
                     {["gif", "png", "jpg", "jpeg", "webp"].includes((arquivo.nome.split(".").pop() || "").toLowerCase()) ? (
-                      <img src={arquivo.url} alt={arquivo.nome} className="w-8 h-8 object-cover" />
+                      <img src={getImageUrl(arquivo.url)} alt={arquivo.nome} className="w-8 h-8 object-cover" />
                     ) : (
                       <span className="text-sm">{isMusic ? "🎵" : "📄"}</span>
                     )}
