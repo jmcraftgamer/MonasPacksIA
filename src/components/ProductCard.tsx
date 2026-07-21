@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { Produto } from "@/types";
 import Link from "next/link";
 
@@ -8,20 +9,70 @@ interface Props {
 }
 
 export default function ProductCard({ produto }: Props) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const isVideo = produto.categoria === "memes-video";
+  const isImage = produto.categoria === "memes-imagem";
+  const hasCover = !!produto.imagem;
+  const videoUrl = isVideo ? produto.downloadUrl : "";
+
   return (
     <div className="group bg-zinc-900/50 rounded-xl overflow-hidden border border-zinc-800 hover:border-zinc-700 transition-all">
       <Link href={`/produto/${produto.id}`} className="block">
-        <div className="relative aspect-video bg-zinc-800 overflow-hidden">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-zinc-600 text-sm">{produto.tipo === "pack" ? "📦" : "🎵"}</div>
-          </div>
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/50">
-            <div className="w-14 h-14 rounded-full bg-yellow flex items-center justify-center">
-              <svg className="w-6 h-6 text-black ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M8 5v14l11-7z" />
-              </svg>
+        <div
+          className="relative aspect-video bg-zinc-800 overflow-hidden"
+          onMouseEnter={() => {
+            if (videoRef.current && videoUrl) {
+              videoRef.current.muted = true;
+              videoRef.current.play().catch(() => {});
+            }
+          }}
+          onMouseLeave={() => {
+            if (videoRef.current) {
+              videoRef.current.pause();
+              videoRef.current.currentTime = 0;
+            }
+          }}
+        >
+          {isVideo && hasCover && videoUrl ? (
+            <video
+              ref={videoRef}
+              src={videoUrl}
+              poster={produto.imagem}
+              className="w-full h-full object-cover"
+              playsInline
+              muted
+              preload="metadata"
+            />
+          ) : isImage && hasCover ? (
+            <img
+              src={produto.imagem}
+              alt={produto.nome}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          ) : hasCover ? (
+            <img
+              src={produto.imagem}
+              alt={produto.nome}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-3xl">{produto.tipo === "pack" ? "📦" : "🎵"}</span>
             </div>
-          </div>
+          )}
+
+          {isVideo && videoUrl && (
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 pointer-events-none">
+              <div className="w-14 h-14 rounded-full bg-yellow/80 flex items-center justify-center">
+                <svg className="w-6 h-6 text-black ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </div>
+            </div>
+          )}
         </div>
       </Link>
 

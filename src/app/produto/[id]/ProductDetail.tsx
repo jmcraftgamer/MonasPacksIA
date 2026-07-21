@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { Produto } from "@/types";
 import AudioVisualizer from "@/components/AudioVisualizer";
 import DownloadButton from "@/components/DownloadButton";
@@ -11,7 +12,23 @@ interface Props {
 }
 
 export default function ProductDetail({ produto }: Props) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [videoPlaying, setVideoPlaying] = useState(false);
+
   const isMusic = produto.categoria === "musica" || produto.categoria === "efeitos";
+  const isVideo = produto.categoria === "memes-video";
+  const isImage = produto.categoria === "memes-imagem";
+
+  const toggleVideo = () => {
+    if (!videoRef.current) return;
+    if (videoPlaying) {
+      videoRef.current.pause();
+    } else {
+      videoRef.current.muted = true;
+      videoRef.current.play().catch(() => {});
+    }
+    setVideoPlaying(!videoPlaying);
+  };
 
   return (
     <div className="space-y-8">
@@ -24,7 +41,30 @@ export default function ProductDetail({ produto }: Props) {
 
       <div className="rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/50">
         <div className="aspect-[21/9] relative bg-zinc-800">
-          {produto.imagem ? (
+          {isVideo && produto.imagem ? (
+            <div className="relative w-full h-full cursor-pointer" onClick={toggleVideo}>
+              <video
+                ref={videoRef}
+                src={produto.downloadUrl}
+                poster={produto.imagem}
+                className="w-full h-full object-cover"
+                playsInline
+                muted
+                preload="metadata"
+                onEnded={() => setVideoPlaying(false)}
+              />
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-16 h-16 rounded-full bg-yellow/90 flex items-center justify-center transition-transform hover:scale-110">
+                  <svg className="w-7 h-7 text-black ml-1" fill="currentColor" viewBox="0 0 24 24">
+                    {videoPlaying
+                      ? <><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></>
+                      : <path d="M8 5v14l11-7z" />
+                    }
+                  </svg>
+                </div>
+              </div>
+            </div>
+          ) : (isImage || (!isMusic && produto.imagem)) ? (
             <img
               src={produto.imagem}
               alt={produto.nome}
@@ -39,7 +79,7 @@ export default function ProductDetail({ produto }: Props) {
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="text-6xl">
-                {produto.categoria === "memes-video" ? "🎬" : produto.categoria === "memes-imagem" ? "🖼️" : "🎵"}
+                {isVideo ? "🎬" : isImage ? "🖼️" : "🎵"}
               </span>
             </div>
           )}
