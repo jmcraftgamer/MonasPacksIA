@@ -43,6 +43,7 @@ async function populateCategory(categoria: string) {
 
   for (const item of allResults.slice(0, 100)) {
     try {
+      const isImage = ["gif", "png", "jpg", "jpeg", "webp"].includes((item.url.split(".").pop() || "").split("?")[0].toLowerCase());
       await supabaseAdmin.from("produtos").insert({
         id: uuidv4(),
         nome: extractNameFromUrl(item.url),
@@ -50,7 +51,7 @@ async function populateCategory(categoria: string) {
         categoria,
         subcategoria: categoria,
         tipo: "unico",
-        imagem: item.previewUrl || "",
+        imagem: isImage ? item.url : (item.previewUrl || ""),
         download_url: item.url,
       });
     } catch {}

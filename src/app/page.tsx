@@ -4,7 +4,8 @@ import { getProdutos } from "@/lib/content/produtos";
 import BannerCarousel from "@/components/BannerCarousel";
 
 export default async function Home() {
-  const produtos = await getProdutos();
+  const todos = await getProdutos();
+  const produtos = todos.filter((p) => p.imagem);
 
   return (
     <div className="space-y-12">

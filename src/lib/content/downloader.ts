@@ -73,7 +73,7 @@ export async function searchContent(
       const data = await res.json();
       const items = (data.photos || data.videos || []).map((p: any) => ({
         url: p.src?.original || p.video_files?.[0]?.link,
-        previewUrl: p.src?.tiny || p.video_files?.[0]?.link,
+        previewUrl: p.src?.large2x || p.src?.large || p.src?.medium || p.src?.tiny || p.video_files?.[0]?.link,
         origem: "pexels",
         tipo: pexelsTipo === "video" ? "video" : "imagem",
       })).filter((i: any) => i.url);
@@ -115,7 +115,7 @@ async function searchKlipy(query: string, type: string, perPage: number, apiKey:
         const f = item.file;
         const best = f?.hd || f?.md || f?.sm || f?.xs || {};
         const url = best.gif?.url || best.webp?.url || best.jpg?.url || best.mp4?.url;
-        const preview = f?.sm?.gif?.url || f?.sm?.webp?.url || f?.xs?.gif?.url || f?.xs?.webp?.url || item.blur_preview || "";
+        const preview = best.gif?.url || best.webp?.url || best.jpg?.url || f?.md?.gif?.url || f?.sm?.gif?.url || item.blur_preview || "";
         return { url, previewUrl: preview, origem: "klipy", tipo: "imagem" as const };
       });
     }
@@ -194,7 +194,7 @@ async function searchPixabay(query: string, perPage: number, apiKey: string, tip
     const data = await res.json();
     return (data.hits || []).map((p: any) => ({
       url: p.largeImageURL || p.webformatURL || p.previewURL,
-      previewUrl: p.previewURL || p.webformatURL,
+      previewUrl: p.largeImageURL || p.webformatURL || p.previewURL,
       origem: "pixabay",
       tipo: tipo === "audio" ? "audio" as const : "imagem" as const,
     }));
