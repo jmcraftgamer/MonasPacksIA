@@ -13,7 +13,6 @@ export default function ProductCard({ produto }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [visible, setVisible] = useState(false);
-  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const el = cardRef.current;
@@ -25,7 +24,7 @@ export default function ProductCard({ produto }: Props) {
           obs.disconnect();
         }
       },
-      { rootMargin: "200px" }
+      { rootMargin: "400px" }
     );
     obs.observe(el);
     return () => obs.disconnect();
@@ -56,46 +55,55 @@ export default function ProductCard({ produto }: Props) {
             }
           }}
         >
-          {!loaded && (
-            <div className="absolute inset-0 bg-zinc-800 animate-pulse flex items-center justify-center">
-              <span className="text-2xl opacity-20">{isVideo ? "🎬" : "🖼️"}</span>
-            </div>
-          )}
-
-          {visible && isVideo && hasCover && videoUrl ? (
-            <video
-              ref={videoRef}
-              src={videoUrl}
-              poster={getImageUrl(produto.imagem)}
-              className={`w-full h-full object-cover transition-opacity ${loaded ? "opacity-100" : "opacity-0"}`}
-              playsInline
-              muted
-              preload="none"
-              onLoadedData={() => setLoaded(true)}
-            />
-          ) : visible && hasCover ? (
-            <img
-              src={getImageUrl(produto.imagem)}
-              alt={produto.nome}
-              className={`w-full h-full object-cover transition-opacity ${loaded ? "opacity-100" : "opacity-0"}`}
-              loading="lazy"
-              decoding="async"
-              onLoad={() => setLoaded(true)}
-            />
-          ) : !visible ? null : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-3xl">{produto.tipo === "pack" ? "📦" : "🎵"}</span>
-            </div>
-          )}
-
-          {isVideo && videoUrl && (
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 pointer-events-none">
-              <div className="w-14 h-14 rounded-full bg-yellow/80 flex items-center justify-center">
-                <svg className="w-6 h-6 text-black ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
+          {isVideo ? (
+            <>
+              <div className="absolute inset-0 bg-zinc-800 flex items-center justify-center">
+                {visible && hasCover ? (
+                  <img
+                    src={getImageUrl(produto.imagem)}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <span className="text-2xl opacity-20">🎬</span>
+                )}
               </div>
-            </div>
+              {visible && videoUrl && (
+                <video
+                  ref={videoRef}
+                  src={videoUrl}
+                  className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity"
+                  playsInline
+                  muted
+                  preload="none"
+                />
+              )}
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 pointer-events-none">
+                <div className="w-14 h-14 rounded-full bg-yellow/80 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-black ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {visible && hasCover ? (
+                <img
+                  src={getImageUrl(produto.imagem)}
+                  alt={produto.nome}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-3xl opacity-20">🖼️</span>
+                </div>
+              )}
+            </>
           )}
         </div>
       </Link>
