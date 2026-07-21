@@ -73,9 +73,9 @@ export async function searchContent(
       });
       const data = await res.json();
       const items = (data.photos || data.videos || []).map((p: any) => ({
-        nome: p.alt || p.photographer || p.id || "Pexels",
+        nome: limparNome(p.alt || p.photographer || "meme"),
         url: p.src?.original || p.video_files?.[0]?.link,
-        previewUrl: p.src?.large2x || p.src?.large || p.src?.medium || p.src?.tiny || p.video_files?.[0]?.link,
+        previewUrl: p.src?.medium || p.src?.small || p.src?.tiny || p.video_files?.[0]?.link,
         origem: "pexels",
         tipo: pexelsTipo === "video" ? "video" : "imagem",
       })).filter((i: any) => i.url);
@@ -104,7 +104,7 @@ async function searchKlipy(query: string, type: string, perPage: number, apiKey:
     if (type === "clips") {
       const page = await client.clips.search({ q: query, perPage: Math.min(perPage, 50) });
       results = (page.data || []).map((item: any) => ({
-        nome: item.title || item.slug || item.id || "Klipy Clip",
+        nome: limparNome(item.title || item.slug || "meme"),
         url: item.file?.mp4 || item.url,
         previewUrl: item.file?.gif || item.url,
         origem: "klipy",
@@ -118,9 +118,9 @@ async function searchKlipy(query: string, type: string, perPage: number, apiKey:
         const f = item.file;
         const best = f?.hd || f?.md || f?.sm || f?.xs || {};
         const url = best.gif?.url || best.webp?.url || best.jpg?.url || best.mp4?.url;
-        const preview = best.gif?.url || best.webp?.url || best.jpg?.url || f?.md?.gif?.url || f?.sm?.gif?.url || item.blur_preview || "";
+        const preview = f?.md?.gif?.url || f?.sm?.gif?.url || f?.xs?.gif?.url || best.gif?.url || best.webp?.url || item.blur_preview || "";
         return {
-          nome: item.title || item.slug || item.id || "Klipy",
+          nome: limparNome(item.title || item.slug || "meme"),
           url,
           previewUrl: preview,
           origem: "klipy",
@@ -128,7 +128,7 @@ async function searchKlipy(query: string, type: string, perPage: number, apiKey:
         };
       });
     }
-    return results.filter((i: any) => i.url);
+    return results.filter((i: any) => i.url && i.nome);
   } catch {
     return [];
   }
@@ -152,7 +152,7 @@ async function searchEpidemic(query: string, type: string, perPage: number, apiK
         for (const track of tracks) {
           if (results.length >= perPage) break;
           results.push({
-            nome: track.title || track.name || track.id || "Epidemic SFX",
+            nome: limparNome(track.title || track.name || "efeito"),
             url: track.preview_mp3 || track.download_url || track.url,
             previewUrl: "",
             origem: "epidemic",
@@ -160,23 +160,21 @@ async function searchEpidemic(query: string, type: string, perPage: number, apiK
           });
         }
       }
-      return results.filter((i) => i.url);
+      return results.filter((i) => i.url && i.nome);
     }
     const url = `${EPIDEMIC_API}/tracks/search?term=${encodeURIComponent(query)}&limit=${Math.min(perPage, 60)}`;
     const res = await fetch(url, { headers });
     if (!res.ok) { console.error(`Epidemic search ${res.status}: ${await res.text()}`); return []; }
     const data = await res.json();
     const tracks = data.tracks || data.results || data.data || [];
-    console.error(`Epidemic search "${query}" => ${tracks.length} tracks`);
     return tracks.map((item: any) => ({
-      nome: item.title || item.name || item.id || "Epidemic",
+      nome: limparNome(item.title || item.name || "musica"),
       url: item.preview_mp3 || item.download_url || item.url || item.preview_url,
       previewUrl: item.album_art_url || item.image_url || "",
       origem: "epidemic",
       tipo: "audio" as const,
-    })).filter((i: any) => i.url);
-  } catch (e: any) {
-    console.error(`Epidemic error: ${e.message}`);
+    })).filter((i: any) => i.url && i.nome);
+  } catch {
     return [];
   }
 }
@@ -186,12 +184,12 @@ async function searchMyInstants(query: string, perPage: number): Promise<SearchR
     const res = await fetch(`${MYINSTANTS_API}/search?q=${encodeURIComponent(query)}&limit=${Math.min(perPage, 30)}`);
     const data = await res.json();
     return (data.sounds || data.results || []).map((s: any) => ({
-      nome: s.name || s.title || s.id || "MyInstants",
+      nome: limparNome(s.name || s.title || "efeito"),
       url: s.audio_url || s.mp3 || s.url,
       previewUrl: s.image_url || s.thumbnail || "",
       origem: "myinstants",
       tipo: "audio" as const,
-    })).filter((i: any) => i.url);
+    })).filter((i: any) => i.url && i.nome);
   } catch {
     return [];
   }
@@ -205,15 +203,43 @@ async function searchPixabay(query: string, perPage: number, apiKey: string, tip
     const res = await fetch(endpoint);
     const data = await res.json();
     return (data.hits || []).map((p: any) => ({
-      nome: p.tags?.split(",")[0]?.trim() || p.user || p.id || "Pixabay",
+      nome: limparNome(p.tags?.split(",")[0]?.trim() || p.user || "imagem"),
       url: p.largeImageURL || p.webformatURL || p.previewURL,
-      previewUrl: p.largeImageURL || p.webformatURL || p.previewURL,
+      previewUrl: p.webformatURL || p.previewURL || p.largeImageURL,
       origem: "pixabay",
       tipo: tipo === "audio" ? "audio" as const : "imagem" as const,
     }));
   } catch {
     return [];
   }
+}
+
+function limparNome(nome: string): string {
+  const pt: Record<string, string> = {
+    funny: "engraçado", meme: "meme", reaction: "reação", comedy: "comédia",
+    clip: "clipe", moment: "momento", template: "modelo", image: "imagem",
+    png: "png", comic: "cômico", sound: "som", effect: "efeito",
+    transition: "transição", explosion: "explosão", background: "fundo",
+    music: "música", royalty: "royalty", free: "grátis", upbeat: "animado",
+    vlog: "vlog", gaming: "jogos", creative: "criativo", commons: "commons",
+    pack: "pack", resource: "recurso", design: "design", assets: "ativos",
+    stock: "stock", wallpaper: "papel de parede", photo: "foto",
+    video: "vídeo", gif: "gif", sticker: "adesivo",
+  };
+  let n = nome
+    .replace(/[-_]/g, " ")
+    .replace(/\.\w+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!n || n.length < 2) return "Meme";
+  const palavras = n.split(" ").map((p) => {
+    const low = p.toLowerCase();
+    return pt[low] || p;
+  });
+  return palavras
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+    .join(" ")
+    .slice(0, 60);
 }
 
 export function getCategoryQueries(categoria: string): string[] {

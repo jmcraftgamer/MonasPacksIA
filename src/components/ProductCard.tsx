@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Produto } from "@/types";
 import Link from "next/link";
 
@@ -10,6 +10,7 @@ interface Props {
 
 export default function ProductCard({ produto }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [loaded, setLoaded] = useState(false);
 
   const isVideo = produto.categoria === "memes-video";
   const isImage = produto.categoria === "memes-imagem";
@@ -34,29 +35,31 @@ export default function ProductCard({ produto }: Props) {
             }
           }}
         >
+          {!loaded && (
+            <div className="absolute inset-0 bg-zinc-800 animate-pulse flex items-center justify-center">
+              <span className="text-2xl opacity-20">{isVideo ? "🎬" : "🖼️"}</span>
+            </div>
+          )}
+
           {isVideo && hasCover && videoUrl ? (
             <video
               ref={videoRef}
               src={videoUrl}
               poster={produto.imagem}
-              className="w-full h-full object-cover"
+              className={`w-full h-full object-cover transition-opacity ${loaded ? "opacity-100" : "opacity-0"}`}
               playsInline
               muted
-              preload="metadata"
-            />
-          ) : isImage && hasCover ? (
-            <img
-              src={produto.imagem}
-              alt={produto.nome}
-              className="w-full h-full object-cover"
-              loading="lazy"
+              preload="none"
+              onLoadedData={() => setLoaded(true)}
             />
           ) : hasCover ? (
             <img
               src={produto.imagem}
               alt={produto.nome}
-              className="w-full h-full object-cover"
+              className={`w-full h-full object-cover transition-opacity ${loaded ? "opacity-100" : "opacity-0"}`}
               loading="lazy"
+              decoding="async"
+              onLoad={() => setLoaded(true)}
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
