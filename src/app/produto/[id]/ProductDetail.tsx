@@ -42,16 +42,22 @@ export default function ProductDetail({ produto }: Props) {
 
       <div className="rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/50">
         <div className="aspect-[21/9] relative bg-zinc-800">
-          {isVideo && produto.imagem ? (
+          {isVideo ? (
             <div className="relative w-full h-full cursor-pointer" onClick={toggleVideo}>
+              {!videoPlaying && produto.imagem && (
+                <img
+                  src={getImageUrl(produto.imagem)}
+                  alt={produto.nome}
+                  className="w-full h-full object-cover"
+                />
+              )}
               <video
                 ref={videoRef}
                 src={produto.downloadUrl}
-                poster={getImageUrl(produto.imagem)}
-                className="w-full h-full object-cover"
+                className={`w-full h-full object-cover ${videoPlaying ? "block" : "hidden"}`}
                 playsInline
                 muted
-                preload="metadata"
+                preload="none"
                 onEnded={() => setVideoPlaying(false)}
               />
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
