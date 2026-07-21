@@ -67,20 +67,26 @@ export async function searchContent(
 
   if (apiKeys.pexels) {
     const pexelsTipo = categoria === "memes-video" ? "video" : "photo";
-    try {
-      const res = await fetch(`${PEXELS_API}/search?query=${encodeURIComponent(query)}&per_page=${Math.min(needed - resultados.length, 80)}&type=${pexelsTipo}`, {
-        headers: { Authorization: apiKeys.pexels },
-      });
-      const data = await res.json();
-      const items = (data.photos || data.videos || []).map((p: any) => ({
-        nome: limparNome(p.alt || p.photographer || "meme"),
-        url: p.src?.original || p.video_files?.[0]?.link,
-        previewUrl: p.src?.medium || p.src?.small || p.src?.tiny || p.video_files?.[0]?.link,
-        origem: "pexels",
-        tipo: pexelsTipo === "video" ? "video" : "imagem",
-      })).filter((i: any) => i.url);
-      resultados.push(...items);
-    } catch {}
+    const maxPages = 5;
+    for (let page = 1; page <= maxPages; page++) {
+      if (resultados.length >= needed) break;
+      try {
+        const res = await fetch(
+          `${PEXELS_API}/search?query=${encodeURIComponent(query)}&per_page=80&page=${page}&type=${pexelsTipo}`,
+          { headers: { Authorization: apiKeys.pexels } }
+        );
+        const data = await res.json();
+        const items = (data.photos || data.videos || []).map((p: any) => ({
+          nome: limparNome(p.alt || p.photographer || "meme"),
+          url: p.src?.original || p.video_files?.[0]?.link,
+          previewUrl: p.src?.medium || p.src?.small || p.src?.tiny || p.video_files?.[0]?.link,
+          origem: "pexels",
+          tipo: pexelsTipo === "video" ? "video" : "imagem",
+        })).filter((i: any) => i.url);
+        resultados.push(...items);
+        if (items.length < 80) break;
+      } catch { break; }
+    }
   }
 
   if (categoria === "efeitos" || categoria === "packs") {
@@ -118,11 +124,11 @@ async function searchKlipy(query: string, type: string, perPage: number, apiKey:
         const f = item.file;
         const best = f?.hd || f?.md || f?.sm || f?.xs || {};
         const url = best.gif?.url || best.webp?.url || best.jpg?.url || best.mp4?.url;
-        const preview = f?.md?.gif?.url || f?.sm?.gif?.url || f?.xs?.gif?.url || best.gif?.url || best.webp?.url || item.blur_preview || "";
+        const thumb = f?.xs?.webp?.url || f?.sm?.webp?.url || f?.xs?.jpg?.url || f?.sm?.jpg?.url || f?.xs?.gif?.url || f?.sm?.gif?.url || best.webp?.url || best.jpg?.url || item.blur_preview || "";
         return {
           nome: limparNome(item.title || item.slug || "meme"),
           url,
-          previewUrl: preview,
+          previewUrl: thumb,
           origem: "klipy",
           tipo: "imagem" as const,
         };
@@ -244,11 +250,66 @@ function limparNome(nome: string): string {
 
 export function getCategoryQueries(categoria: string): string[] {
   const map: Record<string, string[]> = {
-    "musica": ["background music", "royalty free music", "upbeat music", "vlog music", "gaming music"],
-    "memes-video": ["funny video meme", "reaction meme", "comedy clip", "funny moment"],
-    "memes-imagem": ["meme template", "funny image png", "reaction image", "comic png"],
-    "efeitos": ["sound effect", "sfx", "transition sound", "explosion sound", "whoosh"],
-    "packs": ["creative commons pack", "resource pack", "design assets"],
+    "musica": [
+      "background music", "royalty free music", "upbeat music", "vlog music", "gaming music",
+      "cinematic music", "dramatic music", "epic music", "inspiring music", "motivational music",
+      "ambient music", "relaxing music", "calm music", "peaceful music", "meditation music",
+      "pop music", "electronic music", "hip hop beat", "lo fi beat", "trap beat",
+      "rock music", "acoustic guitar", "piano music", "jazz music", "blues music",
+      "comedy music", "funny soundtrack", "cartoon music", "8 bit music", "retro music",
+      "ukulele", "folk music", "indie music", "dance music", "party music",
+      "travel vlog", "intro music", "outro music", "sports music", "action music",
+      "suspense music", "horror music", "mystery music", "adventure music", "fantasy music",
+      "corporate music", "documentary", "podcast intro", "title music", "heroic music",
+    ],
+    "memes-video": [
+      "funny video meme", "reaction meme", "comedy clip", "funny moment", "fail video",
+      "cat video", "dog video", "animal funny", "cute animal", "baby funny",
+      "funny dance", "funny face", "funny fall", "funny accident", "prank video",
+      "funny animal", "crazy video", "funny clip", "comedy video", "meme video",
+      "vine style", "sketch comedy", "funny moment", "awkward moment", "funny pet",
+      "reaction face", "rage face", "surprised face", "shocked face", "laughing face",
+      "funny green screen", "funny greenscreen", "meme template video", "funny sound", "funny edit",
+      "transition meme", "warped video", "funny effect", "funny overlay", "meme overlay",
+      "funny text video", "meme background", "looping video", "funny loop", "perfect loop",
+      "funny clip art", "cartoon funny", "animated meme", "gif video", "reaction clip",
+    ],
+    "memes-imagem": [
+      "meme template", "funny image png", "reaction image", "comic png", "meme png",
+      "transparent meme", "png meme", "no background meme", "meme sticker", "reaction png",
+      "funny face png", "rage face png", "drake meme", "distracted boyfriend", "woman yelling cat",
+      "change my mind", "disaster girl", "side eye", "smudge the cat", "gru plan",
+      "two buttons", "board meeting", "panic meme", "scream meme", "crying cat",
+      "meme face", "funny face", "cartoon face", "reaction face", "shocked meme",
+      "laughing meme", "funny cat", "funny dog", "meme animal", "cute meme",
+      "funny frog", "pepe meme", "stonks meme", "meme man", "brain meme",
+      "anime meme", "gaming meme", "internet meme", "viral meme", "funny comic",
+      "meme overlay png", "stream meme", "twitch meme", "discord meme", "emoji meme",
+    ],
+    "efeitos": [
+      "sound effect", "sfx", "transition sound", "explosion sound", "whoosh",
+      "click sound", "beep sound", "notification sound", "alarm sound", "bell sound",
+      "gun shot", "laser sound", "magic sound", "spell sound", "power up sound",
+      "water splash", "fire sound", "thunder sound", "rain sound", "wind sound",
+      "footstep sound", "door knock", "door creak", "glass break", "metal clang",
+      "cartoon sound", "boing sound", "slide whistle", "drum sound", "cymbal sound",
+      "applause", "laugh track", "crowd cheer", "crowd boo", "silence sound",
+      "robot sound", "alien sound", "monster sound", "animal sound", "bird sound",
+      "car engine", "car horn", "train sound", "plane sound", "helicopter sound",
+      "electric sound", "static sound", "glitch sound", "digital sound", "retro game sfx",
+    ],
+    "packs": [
+      "creative commons pack", "resource pack", "design assets", "mega pack", "sound pack",
+      "meme pack", "effect pack", "music pack", "video pack", "image pack",
+      "bundle pack", "starter pack", "pro pack", "deluxe pack", "complete pack",
+      "overlay pack", "transition pack", "green screen pack", "template pack", "icon pack",
+      "emote pack", "badge pack", "stinger pack", "lower third pack", "intro pack",
+      "stream pack", "gaming pack", "vlog pack", "youtube pack", "twitch pack",
+      "tiktok pack", "reels pack", "short pack", "vertical pack", "horizontal pack",
+      "free pack", "premium pack", "ultimate pack", "collection pack", "asset pack",
+      "motion pack", "animated pack", "static pack", "minimal pack", "retro pack",
+      "fantasy pack", "scifi pack", "horror pack", "comedy pack", "action pack",
+    ],
   };
   return map[categoria] || ["free stock", "creative commons"];
 }

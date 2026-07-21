@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Produto } from "@/types";
 import Link from "next/link";
 
@@ -9,16 +9,36 @@ interface Props {
 }
 
 export default function ProductCard({ produto }: Props) {
+  const cardRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [visible, setVisible] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          obs.disconnect();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
   const isVideo = produto.categoria === "memes-video";
-  const isImage = produto.categoria === "memes-imagem";
   const hasCover = !!produto.imagem;
   const videoUrl = isVideo ? produto.downloadUrl : "";
 
   return (
-    <div className="group bg-zinc-900/50 rounded-xl overflow-hidden border border-zinc-800 hover:border-zinc-700 transition-all">
+    <div
+      ref={cardRef}
+      className="group bg-zinc-900/50 rounded-xl overflow-hidden border border-zinc-800 hover:border-zinc-700 transition-all"
+    >
       <Link href={`/produto/${produto.id}`} className="block">
         <div
           className="relative aspect-video bg-zinc-800 overflow-hidden"
@@ -41,7 +61,7 @@ export default function ProductCard({ produto }: Props) {
             </div>
           )}
 
-          {isVideo && hasCover && videoUrl ? (
+          {visible && isVideo && hasCover && videoUrl ? (
             <video
               ref={videoRef}
               src={videoUrl}
@@ -52,7 +72,7 @@ export default function ProductCard({ produto }: Props) {
               preload="none"
               onLoadedData={() => setLoaded(true)}
             />
-          ) : hasCover ? (
+          ) : visible && hasCover ? (
             <img
               src={produto.imagem}
               alt={produto.nome}
@@ -61,7 +81,7 @@ export default function ProductCard({ produto }: Props) {
               decoding="async"
               onLoad={() => setLoaded(true)}
             />
-          ) : (
+          ) : !visible ? null : (
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="text-3xl">{produto.tipo === "pack" ? "📦" : "🎵"}</span>
             </div>
