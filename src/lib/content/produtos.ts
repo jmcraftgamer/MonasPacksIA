@@ -1,6 +1,6 @@
 import { Produto } from "@/types";
 import { supabaseAdmin } from "@/lib/supabase";
-import { searchContent, getCategoryQueries, extractNameFromUrl } from "./downloader";
+import { searchContent, getCategoryQueries } from "./downloader";
 import { v4 as uuidv4 } from "uuid";
 
 const CATEGORIAS = ["musica", "memes-video", "memes-imagem", "efeitos", "packs"];
@@ -8,54 +8,15 @@ const CATEGORIAS = ["musica", "memes-video", "memes-imagem", "efeitos", "packs"]
 export async function getProdutos(categoria?: string): Promise<Produto[]> {
   if (!categoria) {
     for (const cat of CATEGORIAS) {
-      const { count } = await supabaseAdmin.from("produtos").select("*", { count: "exact", head: true }).eq("categoria", cat);
-      if (count !== null && count < 100) await populateCategory(cat);
+      await ensureCategoryPopulated(cat);
     }
     const { data } = await supabaseAdmin.from("produtos").select("*");
     return (data || []).map(formatProduto);
   }
 
-  const { count } = await supabaseAdmin.from("produtos").select("*", { count: "exact", head: true }).eq("categoria", categoria);
-  if (count !== null && count < 100) {
-    await populateCategory(categoria);
-  }
-
+  await ensureCategoryPopulated(categoria);
   const { data } = await supabaseAdmin.from("produtos").select("*").eq("categoria", categoria);
   return (data || []).map(formatProduto);
-}
-
-async function populateCategory(categoria: string) {
-  const queries = getCategoryQueries(categoria);
-  const allResults: { url: string; previewUrl: string; origem: string; tipo: string }[] = [];
-
-  for (const query of queries) {
-    if (allResults.length >= 100) break;
-    try {
-      const results = await searchContent(query, categoria, 50, {
-        pexels: process.env.PEXELS_API_KEY,
-        pixabay: process.env.PIXABAY_API_KEY,
-        klipy: process.env.KLIPY_API_KEY,
-        epidemic: process.env.EPIDEMIC_API_KEY,
-      });
-      allResults.push(...results);
-    } catch {}
-  }
-
-  for (const item of allResults.slice(0, 100)) {
-    try {
-      const isImage = ["gif", "png", "jpg", "jpeg", "webp"].includes((item.url.split(".").pop() || "").split("?")[0].toLowerCase());
-      await supabaseAdmin.from("produtos").insert({
-        id: uuidv4(),
-        nome: extractNameFromUrl(item.url),
-        descricao: `Conteúdo de ${item.origem}`,
-        categoria,
-        subcategoria: categoria,
-        tipo: "unico",
-        imagem: isImage ? item.url : (item.previewUrl || ""),
-        download_url: item.url,
-      });
-    } catch {}
-  }
 }
 
 export async function getProduto(id: string): Promise<Produto | null> {
@@ -74,6 +35,47 @@ export async function getProduto(id: string): Promise<Produto | null> {
   }
 
   return produto;
+}
+
+async function ensureCategoryPopulated(categoria: string) {
+  const { count } = await supabaseAdmin.from("produtos").select("*", { count: "exact", head: true }).eq("categoria", categoria);
+  if (count !== null && count > 0) return;
+
+  const queries = getCategoryQueries(categoria);
+  for (const query of queries) {
+    try {
+      const results = await searchContent(query, categoria, 200, {
+        pexels: process.env.PEXELS_API_KEY,
+        pixabay: process.env.PIXABAY_API_KEY,
+        klipy: process.env.KLIPY_API_KEY,
+        epidemic: process.env.EPIDEMIC_API_KEY,
+      });
+      await insertNew(results, categoria);
+    } catch {}
+  }
+}
+
+async function insertNew(items: { nome: string; url: string; previewUrl: string; origem: string; tipo: string }[], categoria: string) {
+  const urls = items.map((i) => i.url);
+  const { data: existing } = await supabaseAdmin.from("produtos").select("download_url").in("download_url", urls);
+  const existingUrls = new Set((existing || []).map((r: any) => r.download_url));
+
+  for (const item of items) {
+    if (existingUrls.has(item.url)) continue;
+    try {
+      const isImage = ["gif", "png", "jpg", "jpeg", "webp"].includes((item.url.split(".").pop() || "").split("?")[0].toLowerCase());
+      await supabaseAdmin.from("produtos").insert({
+        id: uuidv4(),
+        nome: item.nome || "Item",
+        descricao: `Conteúdo de ${item.origem}`,
+        categoria,
+        subcategoria: categoria,
+        tipo: "unico",
+        imagem: isImage ? item.url : (item.previewUrl || ""),
+        download_url: item.url,
+      });
+    } catch {}
+  }
 }
 
 function formatProduto(raw: any): Produto {

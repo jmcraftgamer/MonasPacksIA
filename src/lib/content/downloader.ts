@@ -9,6 +9,7 @@ const EPIDEMIC_API = "https://partner-content-api.epidemicsound.com/v0";
 const MYINSTANTS_API = "https://myinstants-api.vercel.app";
 
 interface SearchResult {
+  nome: string;
   url: string;
   previewUrl: string;
   origem: string;
@@ -72,6 +73,7 @@ export async function searchContent(
       });
       const data = await res.json();
       const items = (data.photos || data.videos || []).map((p: any) => ({
+        nome: p.alt || p.photographer || p.id || "Pexels",
         url: p.src?.original || p.video_files?.[0]?.link,
         previewUrl: p.src?.large2x || p.src?.large || p.src?.medium || p.src?.tiny || p.video_files?.[0]?.link,
         origem: "pexels",
@@ -102,6 +104,7 @@ async function searchKlipy(query: string, type: string, perPage: number, apiKey:
     if (type === "clips") {
       const page = await client.clips.search({ q: query, perPage: Math.min(perPage, 50) });
       results = (page.data || []).map((item: any) => ({
+        nome: item.title || item.slug || item.id || "Klipy Clip",
         url: item.file?.mp4 || item.url,
         previewUrl: item.file?.gif || item.url,
         origem: "klipy",
@@ -116,7 +119,13 @@ async function searchKlipy(query: string, type: string, perPage: number, apiKey:
         const best = f?.hd || f?.md || f?.sm || f?.xs || {};
         const url = best.gif?.url || best.webp?.url || best.jpg?.url || best.mp4?.url;
         const preview = best.gif?.url || best.webp?.url || best.jpg?.url || f?.md?.gif?.url || f?.sm?.gif?.url || item.blur_preview || "";
-        return { url, previewUrl: preview, origem: "klipy", tipo: "imagem" as const };
+        return {
+          nome: item.title || item.slug || item.id || "Klipy",
+          url,
+          previewUrl: preview,
+          origem: "klipy",
+          tipo: "imagem" as const,
+        };
       });
     }
     return results.filter((i: any) => i.url);
@@ -143,6 +152,7 @@ async function searchEpidemic(query: string, type: string, perPage: number, apiK
         for (const track of tracks) {
           if (results.length >= perPage) break;
           results.push({
+            nome: track.title || track.name || track.id || "Epidemic SFX",
             url: track.preview_mp3 || track.download_url || track.url,
             previewUrl: "",
             origem: "epidemic",
@@ -159,6 +169,7 @@ async function searchEpidemic(query: string, type: string, perPage: number, apiK
     const tracks = data.tracks || data.results || data.data || [];
     console.error(`Epidemic search "${query}" => ${tracks.length} tracks`);
     return tracks.map((item: any) => ({
+      nome: item.title || item.name || item.id || "Epidemic",
       url: item.preview_mp3 || item.download_url || item.url || item.preview_url,
       previewUrl: item.album_art_url || item.image_url || "",
       origem: "epidemic",
@@ -175,6 +186,7 @@ async function searchMyInstants(query: string, perPage: number): Promise<SearchR
     const res = await fetch(`${MYINSTANTS_API}/search?q=${encodeURIComponent(query)}&limit=${Math.min(perPage, 30)}`);
     const data = await res.json();
     return (data.sounds || data.results || []).map((s: any) => ({
+      nome: s.name || s.title || s.id || "MyInstants",
       url: s.audio_url || s.mp3 || s.url,
       previewUrl: s.image_url || s.thumbnail || "",
       origem: "myinstants",
@@ -193,6 +205,7 @@ async function searchPixabay(query: string, perPage: number, apiKey: string, tip
     const res = await fetch(endpoint);
     const data = await res.json();
     return (data.hits || []).map((p: any) => ({
+      nome: p.tags?.split(",")[0]?.trim() || p.user || p.id || "Pixabay",
       url: p.largeImageURL || p.webformatURL || p.previewURL,
       previewUrl: p.largeImageURL || p.webformatURL || p.previewURL,
       origem: "pixabay",
@@ -202,8 +215,6 @@ async function searchPixabay(query: string, perPage: number, apiKey: string, tip
     return [];
   }
 }
-
-
 
 export function getCategoryQueries(categoria: string): string[] {
   const map: Record<string, string[]> = {
