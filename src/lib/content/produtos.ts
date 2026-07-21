@@ -7,14 +7,11 @@ const CATEGORIAS = ["musica", "memes-video", "memes-imagem", "efeitos", "packs"]
 
 export async function getProdutos(categoria?: string): Promise<Produto[]> {
   if (!categoria) {
-    for (const cat of CATEGORIAS) {
-      await ensureCategoryPopulated(cat);
-    }
+    await Promise.all(CATEGORIAS.map(populateCategory));
     const { data } = await supabaseAdmin.from("produtos").select("*");
     return (data || []).map(formatProduto);
   }
 
-  await ensureCategoryPopulated(categoria);
   const { data } = await supabaseAdmin.from("produtos").select("*").eq("categoria", categoria);
   return (data || []).map(formatProduto);
 }
@@ -37,10 +34,7 @@ export async function getProduto(id: string): Promise<Produto | null> {
   return produto;
 }
 
-async function ensureCategoryPopulated(categoria: string) {
-  const { count } = await supabaseAdmin.from("produtos").select("*", { count: "exact", head: true }).eq("categoria", categoria);
-  if (count !== null && count > 0) return;
-
+async function populateCategory(categoria: string) {
   const queries = getCategoryQueries(categoria);
   for (const query of queries) {
     try {
