@@ -8,5 +8,5 @@ export default async function MemesVideoPage() {
   const packs = produtos.filter((p) => p.tipo === "pack");
   const itens = produtos.filter((p) => p.tipo === "unico");
 
-  return <CategorySection title={cat.nome} packs={packs} itens={itens} />;
+  return <CategorySection title={cat.nome} packs={packs} itens={itens} totalCount={produtos.length} />;
 }

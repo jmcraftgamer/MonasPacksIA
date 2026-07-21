@@ -2,6 +2,7 @@ import Link from "next/link";
 import { categorias } from "@/data/produtos";
 import { getProdutos } from "@/lib/content/produtos";
 import BannerCarousel from "@/components/BannerCarousel";
+import BackgroundPopulate from "@/components/BackgroundPopulate";
 
 export default async function Home() {
   const todos = await getProdutos();
@@ -9,6 +10,8 @@ export default async function Home() {
 
   return (
     <div className="space-y-12">
+      <BackgroundPopulate />
+
       <BannerCarousel produtos={produtos} />
 
       <section className="text-center">
@@ -37,18 +40,22 @@ export default async function Home() {
       <section>
         <h2 className="text-lg font-semibold text-white mb-4 text-center">Categorias</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-          {categorias.map((cat) => (
-            <Link
-              key={cat.id}
-              href={`/${cat.id}`}
-              className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 text-center hover:border-yellow transition-colors group"
-            >
-              <div className="text-2xl mb-2">{cat.icone}</div>
-              <span className="text-zinc-400 group-hover:text-white text-sm font-medium transition-colors">
-                {cat.nome}
-              </span>
-            </Link>
-          ))}
+          {categorias.map((cat) => {
+            const count = todos.filter((p) => p.categoria === cat.id).length;
+            return (
+              <Link
+                key={cat.id}
+                href={`/${cat.id}`}
+                className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 text-center hover:border-yellow transition-colors group"
+              >
+                <div className="text-2xl mb-2">{cat.icone}</div>
+                <span className="text-zinc-400 group-hover:text-white text-sm font-medium transition-colors">
+                  {cat.nome}
+                </span>
+                <p className="text-zinc-600 text-xs mt-1">{count} itens</p>
+              </Link>
+            );
+          })}
         </div>
       </section>
     </div>
