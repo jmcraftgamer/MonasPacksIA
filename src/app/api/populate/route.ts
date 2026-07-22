@@ -17,15 +17,19 @@ export async function GET(request: Request) {
 
   if (clean) {
     await supabaseAdmin.from("produtos").delete().eq("categoria", "memes-imagem");
-    const { data: videoItems } = await supabaseAdmin.from("produtos").select("id,download_url").eq("categoria", "memes-video");
-    const staleVideoIds = (videoItems || [])
-      .filter((r: any) => {
-        const u = (r.download_url || "").split("?")[0].toLowerCase();
-        return [".jpg", ".jpeg", ".png", ".webp"].some((e) => u.endsWith(e));
-      })
-      .map((r: any) => r.id);
-    if (staleVideoIds.length > 0) {
-      await supabaseAdmin.from("produtos").delete().in("id", staleVideoIds);
+
+    const temKlipy = !!process.env.KLIPY_API_KEY;
+    if (temKlipy) {
+      const { data: videoItems } = await supabaseAdmin.from("produtos").select("id,download_url").eq("categoria", "memes-video");
+      const staleVideoIds = (videoItems || [])
+        .filter((r: any) => {
+          const u = (r.download_url || "").split("?")[0].toLowerCase();
+          return [".jpg", ".jpeg", ".png", ".webp"].some((e) => u.endsWith(e));
+        })
+        .map((r: any) => r.id);
+      if (staleVideoIds.length > 0) {
+        await supabaseAdmin.from("produtos").delete().in("id", staleVideoIds);
+      }
     }
   }
 

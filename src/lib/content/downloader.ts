@@ -45,14 +45,19 @@ export async function searchContent(
   const resultados: SearchResult[] = [];
   const needed = quantidade;
 
-  if (apiKeys.klipy) {
-    if (categoria === "memes-video") {
+  if (categoria === "memes-video") {
+    if (apiKeys.klipy) {
       const clips = await searchKlipy(query, "clips", needed, apiKeys.klipy);
       resultados.push(...clips);
       if (resultados.length < needed) {
         const gifs = await searchKlipy(query, "gifs", needed - resultados.length, apiKeys.klipy);
         resultados.push(...gifs);
       }
+    }
+    const restantes = needed - resultados.length;
+    if (restantes > 0) {
+      const memes = await searchMemeApi(restantes);
+      resultados.push(...memes);
     }
   }
 
