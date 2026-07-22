@@ -14,6 +14,7 @@ interface SearchResult {
   previewUrl: string;
   origem: string;
   tipo: "imagem" | "video" | "audio";
+  popularidade: number;
 }
 
 export async function searchContent(
@@ -37,20 +38,6 @@ export async function searchContent(
       if (resultados.length < needed) {
         const gifs = await searchKlipy(query, "gifs", needed - resultados.length, apiKeys.klipy);
         resultados.push(...gifs);
-      }
-    } else if (categoria === "memes-imagem") {
-      const gifs = await searchKlipy(query, "gifs", needed, apiKeys.klipy);
-      resultados.push(...gifs);
-      if (resultados.length < needed) {
-        const stickers = await searchKlipy(query, "stickers", needed - resultados.length, apiKeys.klipy);
-        resultados.push(...stickers);
-      }
-    } else if (categoria === "packs") {
-      const klipyTypes = ["clips", "gifs", "stickers"] as const;
-      for (const t of klipyTypes) {
-        if (resultados.length >= needed) break;
-        const items = await searchKlipy(query, t, needed - resultados.length, apiKeys.klipy);
-        resultados.push(...items);
       }
     }
   }
@@ -76,12 +63,13 @@ export async function searchContent(
           { headers: { Authorization: apiKeys.pexels } }
         );
         const data = await res.json();
-        const items = (data.photos || data.videos || []).map((p: any) => ({
+        const items = (data.photos || data.videos || []).map((p: any, i: number) => ({
           nome: limparNome(p.alt || p.photographer || "meme"),
           url: p.src?.original || p.video_files?.[0]?.link,
           previewUrl: p.src?.medium || p.src?.small || p.src?.tiny || p.video_files?.[0]?.link,
           origem: "pexels",
           tipo: pexelsTipo === "video" ? "video" : "imagem",
+          popularidade: (5 - page) * 8000 + (80 - i) * 100,
         })).filter((i: any) => i.url);
         resultados.push(...items);
         if (items.length < 80) break;
@@ -106,7 +94,7 @@ export async function searchContent(
 async function searchKlipy(query: string, type: string, perPage: number, apiKey: string): Promise<SearchResult[]> {
   try {
     const client = getKlipyClient(apiKey);
-    let results: any[];
+    let results: SearchResult[];
     if (type === "clips") {
       const page = await client.clips.search({ q: query, perPage: Math.min(perPage, 50) });
       results = (page.data || []).map((item: any) => ({
@@ -115,6 +103,7 @@ async function searchKlipy(query: string, type: string, perPage: number, apiKey:
         previewUrl: item.file?.gif || item.url,
         origem: "klipy",
         tipo: "video" as const,
+        popularidade: item.stats?.plays || 0,
       }));
     } else {
       const mediaKey = type === "gifs" ? "gifs" : type === "stickers" ? "stickers" : "memes";
@@ -131,6 +120,7 @@ async function searchKlipy(query: string, type: string, perPage: number, apiKey:
           previewUrl: thumb,
           origem: "klipy",
           tipo: "imagem" as const,
+          popularidade: item.stats?.plays || 0,
         };
       });
     }
@@ -155,7 +145,7 @@ async function searchEpidemic(query: string, type: string, perPage: number, apiK
         if (!res.ok) continue;
         const data = await res.json();
         const tracks = data.tracks || data.data || [];
-        for (const track of tracks) {
+        for (const [i, track] of tracks.entries()) {
           if (results.length >= perPage) break;
           results.push({
             nome: limparNome(track.title || track.name || "efeito"),
@@ -163,6 +153,7 @@ async function searchEpidemic(query: string, type: string, perPage: number, apiK
             previewUrl: "",
             origem: "epidemic",
             tipo: "audio" as const,
+            popularidade: (tracks.length - i) * 100,
           });
         }
       }
@@ -173,12 +164,13 @@ async function searchEpidemic(query: string, type: string, perPage: number, apiK
     if (!res.ok) { console.error(`Epidemic search ${res.status}: ${await res.text()}`); return []; }
     const data = await res.json();
     const tracks = data.tracks || data.results || data.data || [];
-    return tracks.map((item: any) => ({
+    return tracks.map((item: any, i: number) => ({
       nome: limparNome(item.title || item.name || "musica"),
       url: item.preview_mp3 || item.download_url || item.url || item.preview_url,
       previewUrl: item.album_art_url || item.image_url || "",
       origem: "epidemic",
       tipo: "audio" as const,
+      popularidade: (tracks.length - i) * 100,
     })).filter((i: any) => i.url && i.nome);
   } catch {
     return [];
@@ -189,12 +181,13 @@ async function searchMyInstants(query: string, perPage: number): Promise<SearchR
   try {
     const res = await fetch(`${MYINSTANTS_API}/search?q=${encodeURIComponent(query)}&limit=${Math.min(perPage, 30)}`);
     const data = await res.json();
-    return (data.sounds || data.results || []).map((s: any) => ({
+    return (data.sounds || data.results || []).map((s: any, i: number) => ({
       nome: limparNome(s.name || s.title || "efeito"),
       url: s.audio_url || s.mp3 || s.url,
       previewUrl: s.image_url || s.thumbnail || "",
       origem: "myinstants",
       tipo: "audio" as const,
+      popularidade: ((data.sounds || data.results || []).length - i) * 100,
     })).filter((i: any) => i.url && i.nome);
   } catch {
     return [];
@@ -214,6 +207,7 @@ async function searchPixabay(query: string, perPage: number, apiKey: string, tip
       previewUrl: p.webformatURL || p.previewURL || p.largeImageURL,
       origem: "pixabay",
       tipo: tipo === "audio" ? "audio" as const : "imagem" as const,
+      popularidade: (p.likes || 0) * 100 + (p.downloads || 0),
     }));
   } catch {
     return [];
@@ -275,16 +269,16 @@ export function getCategoryQueries(categoria: string): string[] {
       "funny clip art", "cartoon funny", "animated meme", "gif video", "reaction clip",
     ],
     "memes-imagem": [
-      "meme template", "funny image png", "reaction image", "comic png", "meme png",
-      "transparent meme", "png meme", "no background meme", "meme sticker", "reaction png",
-      "funny face png", "rage face png", "drake meme", "distracted boyfriend", "woman yelling cat",
-      "change my mind", "disaster girl", "side eye", "smudge the cat", "gru plan",
-      "two buttons", "board meeting", "panic meme", "scream meme", "crying cat",
-      "meme face", "funny face", "cartoon face", "reaction face", "shocked meme",
-      "laughing meme", "funny cat", "funny dog", "meme animal", "cute meme",
-      "funny frog", "pepe meme", "stonks meme", "meme man", "brain meme",
+      "funny meme", "reaction image", "comic meme", "funny photo", "funny picture",
+      "meme face", "funny face", "cartoon face", "reaction face", "shocked face",
+      "laughing face", "funny cat", "funny dog", "meme animal", "cute meme",
       "anime meme", "gaming meme", "internet meme", "viral meme", "funny comic",
-      "meme overlay png", "stream meme", "twitch meme", "discord meme", "emoji meme",
+      "stream meme", "twitch meme", "discord meme", "emoji meme", "fail photo",
+      "funny moment photo", "prank photo", "funny expression", "funny people", "funny group",
+      "funny portrait", "funny selfie", "crazy face", "silly face", "funny pose",
+      "funny screenshot", "funny text image", "meme template photo", "reaction photo", "comedy photo",
+      "funny animal photo", "cute pet photo", "funny bird", "funny monkey", "funny表情",
+      "funny场景", "funny人物", "funny动作", "funny表情包", "funny梗图",
     ],
     "efeitos": [
       "sound effect", "sfx", "transition sound", "explosion sound", "whoosh",

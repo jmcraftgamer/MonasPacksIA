@@ -1,5 +1,5 @@
 import { Produto } from "@/types";
-import ProductGridWithMore from "./ProductGridWithMore";
+import ProductGridInfinite from "./ProductGridInfinite";
 
 interface Props {
   title: string;
@@ -16,7 +16,7 @@ export default function CategorySection({ title, itens, totalCount, categoria }:
       </div>
 
       {itens.length > 0 ? (
-        <ProductGridWithMore initial={itens} total={totalCount} categoria={categoria} />
+        <ProductGridInfinite initial={itens} total={totalCount} categoria={categoria} />
       ) : (
         <p className="text-zinc-600 text-sm text-center py-16">Nenhum item encontrado.</p>
       )}
