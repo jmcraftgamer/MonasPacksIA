@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-const VERSAO = "2";
+const VERSAO = "3";
 
 export default function BackgroundPopulate() {
   useEffect(() => {

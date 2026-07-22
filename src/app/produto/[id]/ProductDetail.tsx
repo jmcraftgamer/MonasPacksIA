@@ -16,10 +16,11 @@ export default function ProductDetail({ produto }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoPlaying, setVideoPlaying] = useState(false);
 
+  const url = produto.downloadUrl || "";
   const isMusic = produto.categoria === "musica" || produto.categoria === "efeitos";
-  const isMp4 = produto.tipo === "video" && !!produto.downloadUrl?.match(/\.mp4/i);
-  const isGif = produto.tipo === "video" && !!produto.downloadUrl?.match(/\.gif/i);
-  const isImagem = produto.tipo === "imagem";
+  const isMp4 = /\.mp4/i.test(url);
+  const isGif = /\.gif/i.test(url);
+  const isImagem = /\.(jpg|jpeg|png|webp)/i.test(url) || !(isMp4 || isGif);
 
   const toggleVideo = () => {
     if (!videoRef.current) return;

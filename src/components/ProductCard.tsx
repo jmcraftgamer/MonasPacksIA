@@ -5,6 +5,10 @@ import { Produto } from "@/types";
 import Link from "next/link";
 import { getImageUrl } from "@/lib/image";
 
+const EXT_MP4 = /\.mp4/i;
+const EXT_GIF = /\.gif/i;
+const EXT_IMG = /\.(jpg|jpeg|png|webp)/i;
+
 interface Props {
   produto: Produto;
 }
@@ -30,10 +34,11 @@ export default function ProductCard({ produto }: Props) {
     return () => obs.disconnect();
   }, []);
 
+  const url = produto.downloadUrl || "";
   const hasCover = !!produto.imagem;
-  const isMp4 = produto.tipo === "video" && produto.downloadUrl?.match(/\.mp4/i);
-  const isGif = produto.tipo === "video" && produto.downloadUrl?.match(/\.gif/i);
-  const isImagem = produto.tipo === "imagem";
+  const isMp4 = EXT_MP4.test(url);
+  const isGif = EXT_GIF.test(url);
+  const isImagem = EXT_IMG.test(url) || !(isMp4 || isGif);
 
   return (
     <div
@@ -75,7 +80,7 @@ export default function ProductCard({ produto }: Props) {
           {visible && isMp4 && (
             <video
               ref={videoRef}
-              src={produto.downloadUrl}
+              src={url}
               className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity"
               playsInline
               muted
