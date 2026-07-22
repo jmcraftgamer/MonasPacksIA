@@ -40,6 +40,14 @@ export async function searchContent(
         resultados.push(...gifs);
       }
     }
+    if (categoria === "memes-imagem") {
+      const gifs = await searchKlipy(query, "gifs", needed, apiKeys.klipy, true);
+      resultados.push(...gifs);
+      if (resultados.length < needed) {
+        const stickers = await searchKlipy(query, "stickers", needed - resultados.length, apiKeys.klipy, true);
+        resultados.push(...stickers);
+      }
+    }
   }
 
   if (apiKeys.epidemic) {
@@ -91,7 +99,7 @@ export async function searchContent(
   return resultados.slice(0, quantidade);
 }
 
-async function searchKlipy(query: string, type: string, perPage: number, apiKey: string): Promise<SearchResult[]> {
+async function searchKlipy(query: string, type: string, perPage: number, apiKey: string, staticOnly = false): Promise<SearchResult[]> {
   try {
     const client = getKlipyClient(apiKey);
     let results: SearchResult[];
@@ -112,8 +120,12 @@ async function searchKlipy(query: string, type: string, perPage: number, apiKey:
       results = (page.data || []).map((item: any) => {
         const f = item.file;
         const best = f?.hd || f?.md || f?.sm || f?.xs || {};
-        const url = best.gif?.url || best.webp?.url || best.jpg?.url || best.mp4?.url;
-        const thumb = f?.xs?.webp?.url || f?.sm?.webp?.url || f?.xs?.jpg?.url || f?.sm?.jpg?.url || f?.xs?.gif?.url || f?.sm?.gif?.url || best.webp?.url || best.jpg?.url || item.blur_preview || "";
+        const url = staticOnly
+          ? best.jpg?.url || best.webp?.url
+          : best.gif?.url || best.webp?.url || best.jpg?.url || best.mp4?.url;
+        const thumb = staticOnly
+          ? (f?.xs?.jpg?.url || f?.sm?.jpg?.url || f?.xs?.webp?.url || f?.sm?.webp?.url || best.jpg?.url || best.webp?.url || "")
+          : (f?.xs?.webp?.url || f?.sm?.webp?.url || f?.xs?.jpg?.url || f?.sm?.jpg?.url || f?.xs?.gif?.url || f?.sm?.gif?.url || best.webp?.url || best.jpg?.url || item.blur_preview || "");
         return {
           nome: limparNome(item.title || item.slug || "meme"),
           url,
