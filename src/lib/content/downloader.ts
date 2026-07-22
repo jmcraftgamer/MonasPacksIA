@@ -8,14 +8,22 @@ const PIXABAY_API = "https://pixabay.com/api";
 const EPIDEMIC_API = "https://partner-content-api.epidemicsound.com/v0";
 const MYINSTANTS_API = "https://myinstants-api.vercel.app";
 const MEME_API = "https://meme-api.com/gimme";
-const MEME_SUBREDDITS = [
+const MEME_IMAGE_SUBS = [
   "memes", "dankmemes", "me_irl", "wholesomememes",
   "AdviceAnimals", "ComedyCemetery", "MemeEconomy",
   "terriblefacebookmemes", "HistoryMemes", "trippinthroughtime",
-  "lotrmemes", "prequelmemes", "disneymemes",
+  "lotrmemes", "prequelmemes", "sequelmemes", "disneymemes",
   "bonehurtingjuice", "nukedmemes", "deepfriedmemes",
   "softwaregore", "ProgrammerHumor", "funny",
-  "reactiongifs", "highqualitygifs",
+  "facepalm", "rareinsults", "clevercomebacks", "technicallythetruth",
+  "meme", "wrongnumber", "blackmagicfuckery", "tumblr",
+  "brandnewsentence", "blessedimages", "cursedimages", "blursedimages",
+  "oddlyspecific", "surrealmemes", "hellsomememes", "comedyheaven",
+  "im14andthisisdeep", "boomershumor", "okbuddyretard", "copypasta",
+];
+
+const MEME_GIF_SUBS = [
+  "gifs", "reactiongifs", "highqualitygifs", "chemicalreactiongifs",
 ];
 
 interface SearchResult {
@@ -231,9 +239,12 @@ async function searchMyInstants(query: string, perPage: number): Promise<SearchR
 async function searchMemeApi(perPage: number, tipo: "imagem" | "video"): Promise<SearchResult[]> {
   const results: SearchResult[] = [];
   const batchSize = 50;
+  const subs = tipo === "imagem" ? MEME_IMAGE_SUBS : [...MEME_IMAGE_SUBS, ...MEME_GIF_SUBS];
+  const maxAttempts = Math.max(subs.length * 5, 100);
 
-  for (const sub of MEME_SUBREDDITS) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     if (results.length >= perPage) break;
+    const sub = subs[attempt % subs.length];
     try {
       const url = `${MEME_API}/${sub}/${batchSize}`;
       const res = await fetch(url);
