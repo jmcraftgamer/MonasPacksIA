@@ -6,6 +6,14 @@ import { v4 as uuidv4 } from "uuid";
 const CATEGORIAS = ["musica", "memes-video", "memes-imagem", "efeitos", "packs"];
 
 export async function GET() {
+  const QTD: Record<string, number> = {
+    "musica": 500,
+    "memes-video": 1000,
+    "memes-imagem": 500,
+    "efeitos": 500,
+    "packs": 500,
+  };
+
   const results: Record<string, number> = {};
 
   for (const cat of CATEGORIAS) {
@@ -20,7 +28,7 @@ export async function GET() {
 
     for (const query of queries) {
       try {
-        const items = await searchContent(query, categoria, 500, {
+        const items = await searchContent(query, categoria, QTD[categoria] || 500, {
           pexels: process.env.PEXELS_API_KEY,
           pixabay: process.env.PIXABAY_API_KEY,
           klipy: process.env.KLIPY_API_KEY,
