@@ -12,6 +12,8 @@ export async function GET() {
     results[cat] = 0;
   }
 
+  await supabaseAdmin.from("produtos").delete().eq("categoria", "memes-imagem");
+
   const promises = CATEGORIAS.map(async (categoria) => {
     let inseridos = 0;
     const queries = getCategoryQueries(categoria);

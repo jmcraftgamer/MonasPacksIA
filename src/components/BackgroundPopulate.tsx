@@ -2,11 +2,13 @@
 
 import { useEffect } from "react";
 
+const VERSAO = "2";
+
 export default function BackgroundPopulate() {
   useEffect(() => {
     const jaFez = localStorage.getItem("populated");
-    if (jaFez) return;
-    localStorage.setItem("populated", "true");
+    if (jaFez === VERSAO) return;
+    localStorage.setItem("populated", VERSAO);
     fetch("/api/populate").catch(() => {});
   }, []);
 
