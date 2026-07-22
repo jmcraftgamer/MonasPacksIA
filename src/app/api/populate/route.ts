@@ -20,6 +20,7 @@ export async function GET() {
     results[cat] = 0;
   }
 
+  await supabaseAdmin.from("produtos").update({ categoria: "memes-video", subcategoria: "memes-video" }).eq("categoria", "memes-imagem");
   await supabaseAdmin.from("produtos").delete().eq("categoria", "memes-imagem");
 
   const promises = CATEGORIAS.map(async (categoria) => {
