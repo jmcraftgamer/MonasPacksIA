@@ -11,7 +11,7 @@ export interface Produto {
   descricao: string;
   categoria: Categoria;
   subcategoria: string;
-  tipo: "unico" | "pack" | "video" | "imagem" | "audio";
+  tipo: "unico" | "pack";
   imagem: string;
   imagens?: string[];
   arquivoUrl: string;

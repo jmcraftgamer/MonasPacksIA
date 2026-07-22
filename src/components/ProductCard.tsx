@@ -5,10 +5,6 @@ import { Produto } from "@/types";
 import Link from "next/link";
 import { getImageUrl } from "@/lib/image";
 
-const EXT_MP4 = /\.mp4/i;
-const EXT_GIF = /\.gif/i;
-const EXT_IMG = /\.(jpg|jpeg|png|webp)/i;
-
 interface Props {
   produto: Produto;
 }
@@ -34,11 +30,9 @@ export default function ProductCard({ produto }: Props) {
     return () => obs.disconnect();
   }, []);
 
-  const url = produto.downloadUrl || "";
+  const isVideo = produto.categoria === "memes-video";
   const hasCover = !!produto.imagem;
-  const isMp4 = EXT_MP4.test(url);
-  const isGif = EXT_GIF.test(url);
-  const isImagem = EXT_IMG.test(url) || !(isMp4 || isGif);
+  const videoUrl = isVideo ? produto.downloadUrl : "";
 
   return (
     <div
@@ -49,7 +43,7 @@ export default function ProductCard({ produto }: Props) {
         <div
           className="relative aspect-video bg-zinc-800 overflow-hidden"
           onMouseEnter={() => {
-            if (videoRef.current) {
+            if (videoRef.current && videoUrl) {
               videoRef.current.muted = true;
               videoRef.current.play().catch(() => {});
             }
@@ -61,47 +55,55 @@ export default function ProductCard({ produto }: Props) {
             }
           }}
         >
-          {visible && hasCover ? (
-            <img
-              src={getImageUrl(produto.imagem)}
-              alt={isImagem ? produto.nome : ""}
-              className="w-full h-full object-cover"
-              loading="lazy"
-              decoding="async"
-            />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-3xl opacity-20">
-                {isMp4 ? "🎬" : isGif ? "🎞️" : "🖼️"}
-              </span>
-            </div>
-          )}
-
-          {visible && isMp4 && (
-            <video
-              ref={videoRef}
-              src={url}
-              className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity"
-              playsInline
-              muted
-              preload="none"
-            />
-          )}
-
-          {isMp4 && (
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 pointer-events-none">
-              <div className="w-14 h-14 rounded-full bg-yellow/80 flex items-center justify-center">
-                <svg className="w-6 h-6 text-black ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
+          {isVideo ? (
+            <>
+              <div className="absolute inset-0 bg-zinc-800 flex items-center justify-center">
+                {visible && hasCover ? (
+                  <img
+                    src={getImageUrl(produto.imagem)}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <span className="text-2xl opacity-20">🎬</span>
+                )}
               </div>
-            </div>
-          )}
-
-          {isGif && (
-            <div className="absolute top-2 right-2 bg-black/60 text-yellow text-[10px] font-bold px-1.5 py-0.5 rounded">
-              GIF
-            </div>
+              {visible && videoUrl && (
+                <video
+                  ref={videoRef}
+                  src={videoUrl}
+                  className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity"
+                  playsInline
+                  muted
+                  preload="none"
+                />
+              )}
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 pointer-events-none">
+                <div className="w-14 h-14 rounded-full bg-yellow/80 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-black ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {visible && hasCover ? (
+                <img
+                  src={getImageUrl(produto.imagem)}
+                  alt={produto.nome}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-3xl opacity-20">🖼️</span>
+                </div>
+              )}
+            </>
           )}
         </div>
       </Link>

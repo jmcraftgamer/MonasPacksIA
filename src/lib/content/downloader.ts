@@ -7,20 +7,6 @@ const PEXELS_API = "https://api.pexels.com/v1";
 const PIXABAY_API = "https://pixabay.com/api";
 const EPIDEMIC_API = "https://partner-content-api.epidemicsound.com/v0";
 const MYINSTANTS_API = "https://myinstants-api.vercel.app";
-const MEME_API = "https://meme-api.com/gimme";
-const MEME_IMAGE_SUBS = [
-  "memes", "dankmemes", "me_irl", "wholesomememes",
-  "AdviceAnimals", "ComedyCemetery", "MemeEconomy",
-  "terriblefacebookmemes", "HistoryMemes", "trippinthroughtime",
-  "lotrmemes", "prequelmemes", "sequelmemes", "disneymemes",
-  "bonehurtingjuice", "nukedmemes", "deepfriedmemes",
-  "softwaregore", "ProgrammerHumor", "funny",
-  "facepalm", "rareinsults", "clevercomebacks", "technicallythetruth",
-  "meme", "wrongnumber", "blackmagicfuckery", "tumblr",
-  "brandnewsentence", "blessedimages", "cursedimages", "blursedimages",
-  "oddlyspecific", "surrealmemes", "hellsomememes", "comedyheaven",
-  "im14andthisisdeep", "boomershumor", "okbuddyretard", "copypasta",
-];
 
 interface SearchResult {
   nome: string;
@@ -45,8 +31,8 @@ export async function searchContent(
   const resultados: SearchResult[] = [];
   const needed = quantidade;
 
-  if (categoria === "memes-video") {
-    if (apiKeys.klipy) {
+  if (apiKeys.klipy) {
+    if (categoria === "memes-video") {
       const clips = await searchKlipy(query, "clips", needed, apiKeys.klipy);
       resultados.push(...clips);
       if (resultados.length < needed) {
@@ -54,16 +40,14 @@ export async function searchContent(
         resultados.push(...gifs);
       }
     }
-    const restantes = needed - resultados.length;
-    if (restantes > 0) {
-      const memes = await searchMemeApi(restantes);
-      resultados.push(...memes);
+    if (categoria === "memes-imagem") {
+      const gifs = await searchKlipy(query, "gifs", needed, apiKeys.klipy, true);
+      resultados.push(...gifs);
+      if (resultados.length < needed) {
+        const stickers = await searchKlipy(query, "stickers", needed - resultados.length, apiKeys.klipy, true);
+        resultados.push(...stickers);
+      }
     }
-  }
-
-  if (categoria === "memes-imagem") {
-    const memes = await searchMemeApi(needed - resultados.length);
-    resultados.push(...memes);
   }
 
   if (apiKeys.epidemic) {
@@ -115,40 +99,44 @@ export async function searchContent(
   return resultados.slice(0, quantidade);
 }
 
-async function searchKlipy(query: string, type: string, perPage: number, apiKey: string): Promise<SearchResult[]> {
+async function searchKlipy(query: string, type: string, perPage: number, apiKey: string, staticOnly = false): Promise<SearchResult[]> {
   try {
     const client = getKlipyClient(apiKey);
-    const batchSize = Math.min(perPage, 50);
-
+    let results: SearchResult[];
     if (type === "clips") {
-      const page = await client.clips.search({ q: query, perPage: batchSize });
-      return (page.data || []).map((item: any) => ({
+      const page = await client.clips.search({ q: query, perPage: Math.min(perPage, 50) });
+      results = (page.data || []).map((item: any) => ({
         nome: limparNome(item.title || item.slug || "meme"),
         url: item.file?.mp4 || item.url,
         previewUrl: item.file?.gif || item.url,
         origem: "klipy",
         tipo: "video" as const,
         popularidade: item.stats?.plays || 0,
-      })).filter((i: any) => i.url && i.nome);
+      }));
+    } else {
+      const mediaKey = type === "gifs" ? "gifs" : type === "stickers" ? "stickers" : "memes";
+      const clientMethod = client[mediaKey] as any;
+      const page = await clientMethod.search({ q: query, perPage: Math.min(perPage, 50) });
+      results = (page.data || []).map((item: any) => {
+        const f = item.file;
+        const best = f?.hd || f?.md || f?.sm || f?.xs || {};
+        const url = staticOnly
+          ? best.jpg?.url || best.webp?.url
+          : best.gif?.url || best.webp?.url || best.jpg?.url || best.mp4?.url;
+        const thumb = staticOnly
+          ? (f?.xs?.jpg?.url || f?.sm?.jpg?.url || f?.xs?.webp?.url || f?.sm?.webp?.url || best.jpg?.url || best.webp?.url || "")
+          : (f?.xs?.webp?.url || f?.sm?.webp?.url || f?.xs?.jpg?.url || f?.sm?.jpg?.url || f?.xs?.gif?.url || f?.sm?.gif?.url || best.webp?.url || best.jpg?.url || item.blur_preview || "");
+        return {
+          nome: limparNome(item.title || item.slug || "meme"),
+          url,
+          previewUrl: thumb,
+          origem: "klipy",
+          tipo: "imagem" as const,
+          popularidade: item.stats?.plays || 0,
+        };
+      });
     }
-
-    const mediaKey = type === "gifs" ? "gifs" : type === "stickers" ? "stickers" : "memes";
-    const clientMethod = client[mediaKey] as any;
-    const page = await clientMethod.search({ q: query, perPage: batchSize });
-    return (page.data || []).map((item: any) => {
-      const f = item.file;
-      const best = f?.hd || f?.md || f?.sm || f?.xs || {};
-      const url = best.gif?.url || best.webp?.url || best.jpg?.url || best.mp4?.url;
-      const thumb = f?.xs?.webp?.url || f?.sm?.webp?.url || f?.xs?.jpg?.url || f?.sm?.jpg?.url || f?.xs?.gif?.url || f?.sm?.gif?.url || best.webp?.url || best.jpg?.url || item.blur_preview || "";
-      return {
-        nome: limparNome(item.title || item.slug || "meme"),
-        url,
-        previewUrl: thumb,
-        origem: "klipy",
-        tipo: "imagem" as const,
-        popularidade: item.stats?.plays || 0,
-      };
-    }).filter((i: any) => i.url && i.nome);
+    return results.filter((i: any) => i.url && i.nome);
   } catch {
     return [];
   }
@@ -216,43 +204,6 @@ async function searchMyInstants(query: string, perPage: number): Promise<SearchR
   } catch {
     return [];
   }
-}
-
-async function searchMemeApi(perPage: number): Promise<SearchResult[]> {
-  const results: SearchResult[] = [];
-  const seen = new Set<string>();
-  const subs = MEME_IMAGE_SUBS.slice(0, 12);
-  const pool = subs.map((sub) => () => fetch(`${MEME_API}/${sub}/50`).then((r) => r.json()).catch(() => ({ memes: [] })));
-
-  const chunks: any[][] = [];
-  for (let i = 0; i < pool.length; i += 5) {
-    chunks.push(pool.slice(i, i + 5));
-  }
-
-  for (const chunk of chunks) {
-    if (results.length >= perPage) break;
-    const datas = await Promise.all(chunk.map((fn) => fn()));
-    for (const data of datas) {
-      if (results.length >= perPage) break;
-      for (const meme of (data.memes || [])) {
-        if (results.length >= perPage) break;
-        if (seen.has(meme.url)) continue;
-        seen.add(meme.url);
-        const ext = (meme.url || "").split("?")[0].split(".").pop()?.toLowerCase() || "";
-        if (ext !== "jpg" && ext !== "jpeg" && ext !== "png" && ext !== "webp") continue;
-        const preview = meme.preview?.[meme.preview.length - 1] || meme.url;
-        results.push({
-          nome: limparNome(meme.title || "meme"),
-          url: meme.url,
-          previewUrl: preview,
-          origem: "memeapi",
-          tipo: "imagem",
-          popularidade: meme.ups || 0,
-        });
-      }
-    }
-  }
-  return results;
 }
 
 async function searchPixabay(query: string, perPage: number, apiKey: string, tipo: string): Promise<SearchResult[]> {

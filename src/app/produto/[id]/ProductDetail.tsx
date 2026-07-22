@@ -16,11 +16,9 @@ export default function ProductDetail({ produto }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoPlaying, setVideoPlaying] = useState(false);
 
-  const url = produto.downloadUrl || "";
   const isMusic = produto.categoria === "musica" || produto.categoria === "efeitos";
-  const isMp4 = /\.mp4/i.test(url);
-  const isGif = /\.gif/i.test(url);
-  const isImagem = /\.(jpg|jpeg|png|webp)/i.test(url) || !(isMp4 || isGif);
+  const isVideo = produto.categoria === "memes-video";
+  const isImage = produto.categoria === "memes-imagem";
 
   const toggleVideo = () => {
     if (!videoRef.current) return;
@@ -44,7 +42,7 @@ export default function ProductDetail({ produto }: Props) {
 
       <div className="rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/50">
         <div className="aspect-[21/9] relative bg-zinc-800">
-          {isMp4 ? (
+          {isVideo ? (
             <div className="relative w-full h-full cursor-pointer" onClick={toggleVideo}>
               {!videoPlaying && produto.imagem && (
                 <img
@@ -73,19 +71,12 @@ export default function ProductDetail({ produto }: Props) {
                 </div>
               </div>
             </div>
-          ) : (isImagem || isGif || (!isMusic && produto.imagem)) ? (
-            <div className="relative w-full h-full">
-              <img
-                src={getImageUrl(produto.imagem)}
-                alt={produto.nome}
-                className="w-full h-full object-cover"
-              />
-              {isGif && (
-                <div className="absolute top-3 right-3 bg-black/60 text-yellow text-xs font-bold px-2 py-1 rounded">
-                  GIF
-                </div>
-              )}
-            </div>
+          ) : (isImage || (!isMusic && produto.imagem)) ? (
+            <img
+              src={getImageUrl(produto.imagem)}
+              alt={produto.nome}
+              className="w-full h-full object-cover"
+            />
           ) : isMusic ? (
             <div className="absolute inset-0 flex items-center justify-center">
               <AudioVisualizer />
@@ -95,7 +86,7 @@ export default function ProductDetail({ produto }: Props) {
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="text-6xl">
-                {isMp4 ? "🎬" : isGif ? "🎞️" : isImagem ? "🖼️" : "🎵"}
+                {isVideo ? "🎬" : isImage ? "🖼️" : "🎵"}
               </span>
             </div>
           )}
