@@ -102,41 +102,55 @@ export async function searchContent(
 async function searchKlipy(query: string, type: string, perPage: number, apiKey: string, staticOnly = false): Promise<SearchResult[]> {
   try {
     const client = getKlipyClient(apiKey);
-    let results: SearchResult[];
-    if (type === "clips") {
-      const page = await client.clips.search({ q: query, perPage: Math.min(perPage, 50) });
-      results = (page.data || []).map((item: any) => ({
-        nome: limparNome(item.title || item.slug || "meme"),
-        url: item.file?.mp4 || item.url,
-        previewUrl: item.file?.gif || item.url,
-        origem: "klipy",
-        tipo: "video" as const,
-        popularidade: item.stats?.plays || 0,
-      }));
-    } else {
-      const mediaKey = type === "gifs" ? "gifs" : type === "stickers" ? "stickers" : "memes";
-      const clientMethod = client[mediaKey] as any;
-      const page = await clientMethod.search({ q: query, perPage: Math.min(perPage, 50) });
-      results = (page.data || []).map((item: any) => {
-        const f = item.file;
-        const best = f?.hd || f?.md || f?.sm || f?.xs || {};
-        const url = staticOnly
-          ? best.jpg?.url || best.webp?.url
-          : best.gif?.url || best.webp?.url || best.jpg?.url || best.mp4?.url;
-        const thumb = staticOnly
-          ? (f?.xs?.jpg?.url || f?.sm?.jpg?.url || f?.xs?.webp?.url || f?.sm?.webp?.url || best.jpg?.url || best.webp?.url || "")
-          : (f?.xs?.webp?.url || f?.sm?.webp?.url || f?.xs?.jpg?.url || f?.sm?.jpg?.url || f?.xs?.gif?.url || f?.sm?.gif?.url || best.webp?.url || best.jpg?.url || item.blur_preview || "");
-        return {
+    const allResults: SearchResult[] = [];
+    const batchSize = Math.min(perPage, 50);
+    const maxPages = type === "clips" ? 10 : 5;
+
+    for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+      if (allResults.length >= perPage) break;
+
+      let page: any;
+      if (type === "clips") {
+        page = await client.clips.search({ q: query, perPage: batchSize, page: pageNum });
+        const items = (page.data || []).map((item: any) => ({
           nome: limparNome(item.title || item.slug || "meme"),
-          url,
-          previewUrl: thumb,
+          url: item.file?.mp4 || item.url,
+          previewUrl: item.file?.gif || item.url,
           origem: "klipy",
-          tipo: "imagem" as const,
+          tipo: "video" as const,
           popularidade: item.stats?.plays || 0,
-        };
-      });
+        }));
+        allResults.push(...items);
+      } else {
+        const mediaKey = type === "gifs" ? "gifs" : type === "stickers" ? "stickers" : "memes";
+        const clientMethod = client[mediaKey] as any;
+        page = await clientMethod.search({ q: query, perPage: batchSize, page: pageNum });
+        const items = (page.data || []).map((item: any) => {
+          const f = item.file;
+          const best = f?.hd || f?.md || f?.sm || f?.xs || {};
+          const url = staticOnly
+            ? best.jpg?.url || best.webp?.url
+            : best.gif?.url || best.webp?.url || best.jpg?.url || best.mp4?.url;
+          const thumb = staticOnly
+            ? (f?.xs?.jpg?.url || f?.sm?.jpg?.url || f?.xs?.webp?.url || f?.sm?.webp?.url || best.jpg?.url || best.webp?.url || "")
+            : (f?.xs?.webp?.url || f?.sm?.webp?.url || f?.xs?.jpg?.url || f?.sm?.jpg?.url || f?.xs?.gif?.url || f?.sm?.gif?.url || best.webp?.url || best.jpg?.url || item.blur_preview || "");
+          return {
+            nome: limparNome(item.title || item.slug || "meme"),
+            url,
+            previewUrl: thumb,
+            origem: "klipy",
+            tipo: "imagem" as const,
+            popularidade: item.stats?.plays || 0,
+          };
+        });
+        allResults.push(...items);
+      }
+
+      const dataLen = (page.data || []).length;
+      if (dataLen < batchSize) break;
     }
-    return results.filter((i: any) => i.url && i.nome);
+
+    return allResults.filter((i: any) => i.url && i.nome);
   } catch {
     return [];
   }
