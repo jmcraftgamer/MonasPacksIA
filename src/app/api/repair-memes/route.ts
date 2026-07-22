@@ -55,7 +55,7 @@ async function insertNew(
         descricao: `Conteúdo de ${item.origem}`,
         categoria,
         subcategoria: categoria,
-        tipo: "unico",
+        tipo: item.tipo || "unico",
         imagem: item.previewUrl || item.url || "",
         download_url: item.url,
         criado_em: criadoEm,

@@ -238,6 +238,7 @@ async function searchMyInstants(query: string, perPage: number): Promise<SearchR
 
 async function searchMemeApi(perPage: number, tipo: "imagem" | "video"): Promise<SearchResult[]> {
   const results: SearchResult[] = [];
+  const seen = new Set<string>();
   const batchSize = 50;
   const subs = tipo === "imagem" ? MEME_IMAGE_SUBS : [...MEME_IMAGE_SUBS, ...MEME_GIF_SUBS];
   const maxAttempts = Math.max(subs.length * 5, 100);
@@ -253,6 +254,8 @@ async function searchMemeApi(perPage: number, tipo: "imagem" | "video"): Promise
       const memes: any[] = data.memes || [];
       for (const meme of memes) {
         if (results.length >= perPage) break;
+        if (seen.has(meme.url)) continue;
+        seen.add(meme.url);
         const cleanUrl = (meme.url || "").split("?")[0];
         const ext = cleanUrl.split(".").pop()?.toLowerCase() || "";
         const isGif = ext === "gif" || ext === "gifv";
