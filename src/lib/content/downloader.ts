@@ -110,58 +110,40 @@ export async function searchContent(
   return resultados.slice(0, quantidade);
 }
 
-async function searchKlipy(query: string, type: string, perPage: number, apiKey: string, staticOnly = false): Promise<SearchResult[]> {
+async function searchKlipy(query: string, type: string, perPage: number, apiKey: string): Promise<SearchResult[]> {
   try {
     const client = getKlipyClient(apiKey);
-    const allResults: SearchResult[] = [];
     const batchSize = Math.min(perPage, 50);
-    const maxPages = type === "clips" ? 15 : 8;
 
-    for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
-      if (allResults.length >= perPage) break;
-
-      let page: any;
-      if (type === "clips") {
-        page = await client.clips.search({ q: query, perPage: batchSize, page: pageNum });
-        const items = (page.data || []).map((item: any) => ({
-          nome: limparNome(item.title || item.slug || "meme"),
-          url: item.file?.mp4 || item.url,
-          previewUrl: item.file?.gif || item.url,
-          origem: "klipy",
-          tipo: "video" as const,
-          popularidade: item.stats?.plays || 0,
-        }));
-        allResults.push(...items);
-      } else {
-        const mediaKey = type === "gifs" ? "gifs" : type === "stickers" ? "stickers" : "memes";
-        const clientMethod = client[mediaKey] as any;
-        page = await clientMethod.search({ q: query, perPage: batchSize, page: pageNum });
-        const items = (page.data || []).map((item: any) => {
-          const f = item.file;
-          const best = f?.hd || f?.md || f?.sm || f?.xs || {};
-          const url = staticOnly
-            ? best.jpg?.url || best.webp?.url
-            : best.gif?.url || best.webp?.url || best.jpg?.url || best.mp4?.url;
-          const thumb = staticOnly
-            ? (f?.xs?.jpg?.url || f?.sm?.jpg?.url || f?.xs?.webp?.url || f?.sm?.webp?.url || best.jpg?.url || best.webp?.url || "")
-            : (f?.xs?.webp?.url || f?.sm?.webp?.url || f?.xs?.jpg?.url || f?.sm?.jpg?.url || f?.xs?.gif?.url || f?.sm?.gif?.url || best.webp?.url || best.jpg?.url || item.blur_preview || "");
-          return {
-            nome: limparNome(item.title || item.slug || "meme"),
-            url,
-            previewUrl: thumb,
-            origem: "klipy",
-            tipo: "imagem" as const,
-            popularidade: item.stats?.plays || 0,
-          };
-        });
-        allResults.push(...items);
-      }
-
-      const dataLen = (page.data || []).length;
-      if (dataLen < batchSize) break;
+    if (type === "clips") {
+      const page = await client.clips.search({ q: query, perPage: batchSize });
+      return (page.data || []).map((item: any) => ({
+        nome: limparNome(item.title || item.slug || "meme"),
+        url: item.file?.mp4 || item.url,
+        previewUrl: item.file?.gif || item.url,
+        origem: "klipy",
+        tipo: "video" as const,
+        popularidade: item.stats?.plays || 0,
+      })).filter((i: any) => i.url && i.nome);
     }
 
-    return allResults.filter((i: any) => i.url && i.nome);
+    const mediaKey = type === "gifs" ? "gifs" : type === "stickers" ? "stickers" : "memes";
+    const clientMethod = client[mediaKey] as any;
+    const page = await clientMethod.search({ q: query, perPage: batchSize });
+    return (page.data || []).map((item: any) => {
+      const f = item.file;
+      const best = f?.hd || f?.md || f?.sm || f?.xs || {};
+      const url = best.gif?.url || best.webp?.url || best.jpg?.url || best.mp4?.url;
+      const thumb = f?.xs?.webp?.url || f?.sm?.webp?.url || f?.xs?.jpg?.url || f?.sm?.jpg?.url || f?.xs?.gif?.url || f?.sm?.gif?.url || best.webp?.url || best.jpg?.url || item.blur_preview || "";
+      return {
+        nome: limparNome(item.title || item.slug || "meme"),
+        url,
+        previewUrl: thumb,
+        origem: "klipy",
+        tipo: "imagem" as const,
+        popularidade: item.stats?.plays || 0,
+      };
+    }).filter((i: any) => i.url && i.nome);
   } catch {
     return [];
   }
@@ -234,20 +216,20 @@ async function searchMyInstants(query: string, perPage: number): Promise<SearchR
 async function searchMemeApi(perPage: number): Promise<SearchResult[]> {
   const results: SearchResult[] = [];
   const seen = new Set<string>();
-  const batchSize = 50;
-  const subs = MEME_IMAGE_SUBS;
-  const maxAttempts = Math.min(subs.length * 3, 80);
+  const subs = MEME_IMAGE_SUBS.slice(0, 12);
+  const pool = subs.map((sub) => () => fetch(`${MEME_API}/${sub}/50`).then((r) => r.json()).catch(() => ({ memes: [] })));
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+  const chunks: any[][] = [];
+  for (let i = 0; i < pool.length; i += 5) {
+    chunks.push(pool.slice(i, i + 5));
+  }
+
+  for (const chunk of chunks) {
     if (results.length >= perPage) break;
-    const sub = subs[attempt % subs.length];
-    try {
-      const url = `${MEME_API}/${sub}/${batchSize}`;
-      const res = await fetch(url);
-      if (!res.ok) continue;
-      const data = await res.json();
-      const memes: any[] = data.memes || [];
-      for (const meme of memes) {
+    const datas = await Promise.all(chunk.map((fn) => fn()));
+    for (const data of datas) {
+      if (results.length >= perPage) break;
+      for (const meme of (data.memes || [])) {
         if (results.length >= perPage) break;
         if (seen.has(meme.url)) continue;
         seen.add(meme.url);
@@ -263,7 +245,7 @@ async function searchMemeApi(perPage: number): Promise<SearchResult[]> {
           popularidade: meme.ups || 0,
         });
       }
-    } catch {}
+    }
   }
   return results;
 }

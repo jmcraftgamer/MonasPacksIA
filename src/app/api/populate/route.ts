@@ -5,14 +5,9 @@ import { v4 as uuidv4 } from "uuid";
 
 const CATEGORIAS = ["musica", "memes-video", "memes-imagem", "efeitos", "packs"];
 
-export async function GET() {
-  const QTD: Record<string, number> = {
-    "musica": 500,
-    "memes-video": 500,
-    "memes-imagem": 5000,
-    "efeitos": 500,
-    "packs": 500,
-  };
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const clean = searchParams.get("clean") === "1";
 
   const results: Record<string, number> = {};
 
@@ -20,26 +15,36 @@ export async function GET() {
     results[cat] = 0;
   }
 
-  // Clean up stale items
-  await supabaseAdmin.from("produtos").delete().eq("categoria", "memes-imagem");
-  const { data: videoItems } = await supabaseAdmin.from("produtos").select("id,download_url").eq("categoria", "memes-video");
-  const staleVideoIds = (videoItems || [])
-    .filter((r: any) => {
-      const u = (r.download_url || "").split("?")[0].toLowerCase();
-      return [".jpg", ".jpeg", ".png", ".webp"].some((e) => u.endsWith(e));
-    })
-    .map((r: any) => r.id);
-  if (staleVideoIds.length > 0) {
-    await supabaseAdmin.from("produtos").delete().in("id", staleVideoIds);
+  if (clean) {
+    await supabaseAdmin.from("produtos").delete().eq("categoria", "memes-imagem");
+    const { data: videoItems } = await supabaseAdmin.from("produtos").select("id,download_url").eq("categoria", "memes-video");
+    const staleVideoIds = (videoItems || [])
+      .filter((r: any) => {
+        const u = (r.download_url || "").split("?")[0].toLowerCase();
+        return [".jpg", ".jpeg", ".png", ".webp"].some((e) => u.endsWith(e));
+      })
+      .map((r: any) => r.id);
+    if (staleVideoIds.length > 0) {
+      await supabaseAdmin.from("produtos").delete().in("id", staleVideoIds);
+    }
   }
+
+  const QTD: Record<string, number> = {
+    "musica": 500,
+    "memes-video": 500,
+    "memes-imagem": 2000,
+    "efeitos": 500,
+    "packs": 500,
+  };
 
   const promises = CATEGORIAS.map(async (categoria) => {
     let inseridos = 0;
-    const queries = getCategoryQueries(categoria);
+    const queries = getCategoryQueries(categoria).slice(0, 2);
+    const qtd = QTD[categoria] || 500;
 
     for (const query of queries) {
       try {
-        const items = await searchContent(query, categoria, QTD[categoria] || 500, {
+        const items = await searchContent(query, categoria, qtd, {
           pexels: process.env.PEXELS_API_KEY,
           pixabay: process.env.PIXABAY_API_KEY,
           klipy: process.env.KLIPY_API_KEY,
