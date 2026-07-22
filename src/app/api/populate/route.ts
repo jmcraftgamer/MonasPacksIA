@@ -8,7 +8,7 @@ const CATEGORIAS = ["musica", "memes-video", "memes-imagem", "efeitos", "packs"]
 export async function GET() {
   const QTD: Record<string, number> = {
     "musica": 500,
-    "memes-video": 1000,
+    "memes-video": 500,
     "memes-imagem": 5000,
     "efeitos": 500,
     "packs": 500,

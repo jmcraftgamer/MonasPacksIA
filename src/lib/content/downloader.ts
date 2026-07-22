@@ -22,10 +22,6 @@ const MEME_IMAGE_SUBS = [
   "im14andthisisdeep", "boomershumor", "okbuddyretard", "copypasta",
 ];
 
-const MEME_GIF_SUBS = [
-  "gifs", "reactiongifs", "highqualitygifs", "chemicalreactiongifs",
-];
-
 interface SearchResult {
   nome: string;
   url: string;
@@ -60,9 +56,8 @@ export async function searchContent(
     }
   }
 
-  if (categoria === "memes-imagem" || categoria === "memes-video") {
-    const tipo = categoria === "memes-imagem" ? "imagem" : "video";
-    const memes = await searchMemeApi(needed - resultados.length, tipo);
+  if (categoria === "memes-imagem") {
+    const memes = await searchMemeApi(needed - resultados.length);
     resultados.push(...memes);
   }
 
@@ -236,12 +231,12 @@ async function searchMyInstants(query: string, perPage: number): Promise<SearchR
   }
 }
 
-async function searchMemeApi(perPage: number, tipo: "imagem" | "video"): Promise<SearchResult[]> {
+async function searchMemeApi(perPage: number): Promise<SearchResult[]> {
   const results: SearchResult[] = [];
   const seen = new Set<string>();
   const batchSize = 50;
-  const subs = tipo === "imagem" ? MEME_IMAGE_SUBS : [...MEME_IMAGE_SUBS, ...MEME_GIF_SUBS];
-  const maxAttempts = Math.max(subs.length * 5, 100);
+  const subs = MEME_IMAGE_SUBS;
+  const maxAttempts = Math.min(subs.length * 3, 80);
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     if (results.length >= perPage) break;
@@ -256,20 +251,15 @@ async function searchMemeApi(perPage: number, tipo: "imagem" | "video"): Promise
         if (results.length >= perPage) break;
         if (seen.has(meme.url)) continue;
         seen.add(meme.url);
-        const cleanUrl = (meme.url || "").split("?")[0];
-        const ext = cleanUrl.split(".").pop()?.toLowerCase() || "";
-        const isGif = ext === "gif" || ext === "gifv";
-        const isImage = ext === "jpg" || ext === "jpeg" || ext === "png" || ext === "webp";
-        if (tipo === "video" && !isGif) continue;
-        if (tipo === "imagem" && !isImage) continue;
-        if (!isGif && !isImage) continue;
+        const ext = (meme.url || "").split("?")[0].split(".").pop()?.toLowerCase() || "";
+        if (ext !== "jpg" && ext !== "jpeg" && ext !== "png" && ext !== "webp") continue;
         const preview = meme.preview?.[meme.preview.length - 1] || meme.url;
         results.push({
           nome: limparNome(meme.title || "meme"),
           url: meme.url,
           previewUrl: preview,
           origem: "memeapi",
-          tipo: isGif ? "video" : "imagem",
+          tipo: "imagem",
           popularidade: meme.ups || 0,
         });
       }
