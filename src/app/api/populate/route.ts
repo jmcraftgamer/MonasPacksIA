@@ -33,9 +33,6 @@ export async function GET() {
 
   await Promise.all(promises);
 
-  // Remove old meme-api items (inseridos com origem "memeapi")
-  await supabaseAdmin.from("produtos").delete().ilike("descricao", "%memeapi%");
-
   return NextResponse.json({ success: true, results });
 }
 
