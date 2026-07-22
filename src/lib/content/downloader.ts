@@ -277,8 +277,8 @@ export function getCategoryQueries(categoria: string): string[] {
       "funny moment photo", "prank photo", "funny expression", "funny people", "funny group",
       "funny portrait", "funny selfie", "crazy face", "silly face", "funny pose",
       "funny screenshot", "funny text image", "meme template photo", "reaction photo", "comedy photo",
-      "funny animal photo", "cute pet photo", "funny bird", "funny monkey", "funny表情",
-      "funny场景", "funny人物", "funny动作", "funny表情包", "funny梗图",
+      "funny animal photo", "cute pet photo", "funny bird", "funny monkey", "awkward turtle",
+      "funny caption", "meme collection", "dank meme", "meme compilation", "funny fails",
     ],
     "efeitos": [
       "sound effect", "sfx", "transition sound", "explosion sound", "whoosh",
