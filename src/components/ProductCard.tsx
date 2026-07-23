@@ -70,42 +70,34 @@ export default function ProductCard({ produto }: Props) {
       <Link href={`/produto/${produto.id}`} className="block">
         <div
           className="relative aspect-video bg-zinc-800 overflow-hidden"
-          onMouseEnter={() => {
-            if (isVideo && videoRef.current && videoUrl) {
-              videoRef.current.muted = true;
-              videoRef.current.play().catch(() => {});
-            }
-          }}
-          onMouseLeave={() => {
-            if (isVideo && videoRef.current) {
-              videoRef.current.pause();
-              videoRef.current.currentTime = 0;
-            }
-          }}
+
         >
           {isVideo ? (
             <>
-              <div className="absolute inset-0 bg-zinc-800 flex items-center justify-center">
-                {visible && hasCover ? (
-                  <img
-                    src={getImageUrl(produto.imagem)}
-                    alt=""
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                ) : (
-                  <span className="text-2xl opacity-20">🎬</span>
-                )}
-              </div>
+              {visible && hasCover && (
+                <img
+                  src={getImageUrl(produto.imagem)}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
+                  loading="lazy"
+                  decoding="async"
+                />
+              )}
               {visible && videoUrl && (
                 <video
                   ref={videoRef}
                   src={videoUrl}
-                  className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute inset-0 w-full h-full object-cover"
                   playsInline
                   muted
-                  preload="none"
+                  loop
+                  autoPlay
+                  preload="auto"
+                  onLoadedData={() => {
+                    if (videoRef.current) {
+                      videoRef.current.play().catch(() => {});
+                    }
+                  }}
                 />
               )}
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 pointer-events-none">

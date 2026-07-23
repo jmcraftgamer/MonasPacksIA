@@ -22,7 +22,8 @@ export default function BannerCarousel({ produtos }: Props) {
 
   if (produtos.length === 0) return null;
 
-  const p = produtos[current];
+  const isVideoItem = (prod: Produto) =>
+    prod.categoria === "memes-video" || prod.categoria === "videos";
 
   return (
     <section className="relative w-full h-[300px] sm:h-[400px] rounded-2xl overflow-hidden">
@@ -33,7 +34,18 @@ export default function BannerCarousel({ produtos }: Props) {
           className={`absolute inset-0 transition-opacity duration-700 ${i === current ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         >
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent z-10" />
-          {prod.imagem ? (
+          {isVideoItem(prod) && prod.downloadUrl ? (
+            <video
+              key={`${prod.id}-${i === current}`}
+              src={prod.downloadUrl}
+              className="w-full h-full object-cover"
+              playsInline
+              muted
+              loop
+              autoPlay={i === current}
+              preload={i === current ? "auto" : "none"}
+            />
+          ) : prod.imagem ? (
             <img
               src={getImageUrl(prod.imagem)}
               alt={prod.nome}
