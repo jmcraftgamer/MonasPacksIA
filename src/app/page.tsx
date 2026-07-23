@@ -26,7 +26,7 @@ export default async function Home() {
           MonaPacks<span className="text-yellow">IA</span>
         </h1>
         <p className="text-zinc-400 text-sm sm:text-base max-w-xl mx-auto">
-          Sua biblioteca completa de trilhas sonoras, memes, efeitos e packs para youtubers e editores.
+          Sua biblioteca completa de trilhas sonoras, memes, vídeos, imagens, efeitos e packs para youtubers e editores.
         </p>
         <div className="flex items-center justify-center gap-3 mt-6">
           <Link

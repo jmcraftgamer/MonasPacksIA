@@ -3,7 +3,9 @@ export type Categoria =
   | "memes-video"
   | "memes-imagem"
   | "efeitos"
-  | "packs";
+  | "packs"
+  | "videos"
+  | "imagens";
 
 export interface Produto {
   id: string;

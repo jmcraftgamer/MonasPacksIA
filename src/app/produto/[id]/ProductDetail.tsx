@@ -14,11 +14,13 @@ interface Props {
 
 export default function ProductDetail({ produto }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const [videoPlaying, setVideoPlaying] = useState(false);
+  const [audioPlaying, setAudioPlaying] = useState(false);
 
   const isMusic = produto.categoria === "musica" || produto.categoria === "efeitos";
-  const isVideo = produto.categoria === "memes-video";
-  const isImage = produto.categoria === "memes-imagem";
+  const isVideo = produto.categoria === "memes-video" || produto.categoria === "videos";
+  const isImage = produto.categoria === "memes-imagem" || produto.categoria === "imagens";
 
   const toggleVideo = () => {
     if (!videoRef.current) return;
@@ -31,13 +33,24 @@ export default function ProductDetail({ produto }: Props) {
     setVideoPlaying(!videoPlaying);
   };
 
+  const toggleAudio = () => {
+    if (!audioRef.current) return;
+    if (audioPlaying) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    } else {
+      audioRef.current.play().catch(() => {});
+    }
+    setAudioPlaying(!audioPlaying);
+  };
+
   return (
     <div className="space-y-8">
       <Link href={`/${produto.categoria}`} className="inline-flex items-center gap-1 text-zinc-500 hover:text-yellow transition-colors text-sm">
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
-        Voltar para {produto.categoria === "musica" ? "Músicas" : produto.categoria}
+        Voltar
       </Link>
 
       <div className="rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/50">
@@ -71,16 +84,38 @@ export default function ProductDetail({ produto }: Props) {
                 </div>
               </div>
             </div>
-          ) : (isImage || (!isMusic && produto.imagem)) ? (
+          ) : isMusic ? (
+            <div className="relative w-full h-full">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <AudioVisualizer playing={audioPlaying} />
+              </div>
+              <button
+                onClick={toggleAudio}
+                className="absolute inset-0 flex items-center justify-center group"
+              >
+                <div className={`w-20 h-20 rounded-full flex items-center justify-center transition-transform hover:scale-110 ${audioPlaying ? "bg-yellow" : "bg-yellow/90"}`}>
+                  <svg className="w-8 h-8 text-black ml-1" fill="currentColor" viewBox="0 0 24 24">
+                    {audioPlaying ? (
+                      <><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></>
+                    ) : (
+                      <path d="M8 5v14l11-7z" />
+                    )}
+                  </svg>
+                </div>
+              </button>
+              <audio
+                ref={audioRef}
+                src={produto.downloadUrl}
+                preload="none"
+                onEnded={() => setAudioPlaying(false)}
+              />
+            </div>
+          ) : isImage || produto.imagem ? (
             <img
               src={getImageUrl(produto.imagem)}
               alt={produto.nome}
               className="w-full h-full object-cover"
             />
-          ) : isMusic ? (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <AudioVisualizer />
-            </div>
           ) : produto.tipo === "pack" && produto.imagens ? (
             <Carousel imagens={produto.imagens} />
           ) : (

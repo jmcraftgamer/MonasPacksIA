@@ -56,16 +56,36 @@ export async function searchContent(
           resultados.push(...gifs);
         }
       }
-      if (apiKeys.pexels && resultados.length < needed) {
-        const videos = await searchPexelsVideos(query, needed - resultados.length, apiKeys.pexels);
-        resultados.push(...videos);
-      }
       break;
     }
 
     case "memes-imagem": {
       const memes = await searchMemeApi(query, needed);
       resultados.push(...memes);
+      break;
+    }
+
+    case "videos": {
+      if (apiKeys.pexels) {
+        const vids = await searchPexelsVideos(query, needed, apiKeys.pexels);
+        resultados.push(...vids);
+      }
+      if (apiKeys.pixabay && resultados.length < needed) {
+        const vids = await searchPixabay(query, needed - resultados.length, apiKeys.pixabay, "video");
+        resultados.push(...vids);
+      }
+      break;
+    }
+
+    case "imagens": {
+      if (apiKeys.pexels) {
+        const photos = await searchPexelsPhotos(query, needed, apiKeys.pexels);
+        resultados.push(...photos);
+      }
+      if (apiKeys.pixabay && resultados.length < needed) {
+        const images = await searchPixabay(query, needed - resultados.length, apiKeys.pixabay, "image");
+        resultados.push(...images);
+      }
       break;
     }
 
@@ -84,14 +104,6 @@ export async function searchContent(
     case "packs": {
       const sounds = await searchMyInstants(query, needed);
       resultados.push(...sounds);
-      if (apiKeys.pexels && resultados.length < needed) {
-        const photos = await searchPexelsPhotos(query, needed - resultados.length, apiKeys.pexels);
-        resultados.push(...photos);
-      }
-      if (apiKeys.pixabay && resultados.length < needed) {
-        const images = await searchPixabay(query, needed - resultados.length, apiKeys.pixabay, "image");
-        resultados.push(...images);
-      }
       break;
     }
   }
@@ -255,12 +267,27 @@ async function searchPexelsPhotos(query: string, perPage: number, apiKey: string
 
 async function searchPixabay(query: string, perPage: number, apiKey: string, tipo: string): Promise<SearchResult[]> {
   try {
-    const endpoint = tipo === "audio"
-      ? `${PIXABAY_API}/?key=${apiKey}&q=${encodeURIComponent(query)}&per_page=${Math.min(perPage, 50)}&safesearch=true`
-      : `${PIXABAY_API}/?key=${apiKey}&q=${encodeURIComponent(query)}&per_page=${Math.min(perPage, 50)}&safesearch=true&image_type=photo`;
+    let endpoint: string;
+    if (tipo === "audio") {
+      endpoint = `${PIXABAY_API}/?key=${apiKey}&q=${encodeURIComponent(query)}&per_page=${Math.min(perPage, 50)}&safesearch=true`;
+    } else if (tipo === "video") {
+      endpoint = `${PIXABAY_API}/videos/?key=${apiKey}&q=${encodeURIComponent(query)}&per_page=${Math.min(perPage, 50)}&safesearch=true`;
+    } else {
+      endpoint = `${PIXABAY_API}/?key=${apiKey}&q=${encodeURIComponent(query)}&per_page=${Math.min(perPage, 50)}&safesearch=true&image_type=photo`;
+    }
     const res = await fetch(endpoint);
     if (!res.ok) return [];
     const data = await res.json();
+    if (tipo === "video") {
+      return (data.hits || []).map((v: any, i: number) => ({
+        nome: limparNome(v.tags?.split(",")[0]?.trim() || v.user || "video"),
+        url: v.videos?.large?.url || v.videos?.medium?.url || v.videos?.small?.url || "",
+        previewUrl: v.videos?.tiny?.url || v.userImageURL || "",
+        origem: "pixabay",
+        tipo: "video" as const,
+        popularidade: (data.hits.length - i) * 1000 + (v.likes || 0) * 100,
+      })).filter((x: any) => x.url && x.nome).slice(0, perPage);
+    }
     return (data.hits || []).map((p: any) => ({
       nome: limparNome(p.tags?.split(",")[0]?.trim() || p.user || (tipo === "audio" ? "musica" : "imagem")),
       url: tipo === "audio" ? (p.previewURL || p.webformatURL) : (p.largeImageURL || p.webformatURL || p.previewURL),
@@ -381,6 +408,24 @@ export function getCategoryQueries(categoria: string): string[] {
       "robot sound", "alien sound", "monster sound", "animal sound", "bird sound",
       "car engine", "car horn", "train sound", "plane sound", "helicopter sound",
       "electric sound", "static sound", "glitch sound", "digital sound", "retro game sfx",
+    ],
+    "videos": [
+      "nature video", "city video", "aerial video", "drone footage", "timelapse",
+      "slow motion", "b-roll", "background video", "travel footage", "cinematic",
+      "business video", "technology video", "sports footage", "animation", "abstract",
+      "corporate video", "wedding video", "party video", "music video", "dance video",
+      "food video", "fashion video", "wildlife video", "ocean video", "mountain video",
+      "street video", "night video", "sunset video", "rain video", "fire video",
+    ],
+    "imagens": [
+      "nature photography", "city landscape", "business photo", "technology photo",
+      "people portrait", "food photography", "travel photo", "architecture photo",
+      "abstract background", "texture photo", "office photo", "nature landscape",
+      "animal photo", "flower photo", "mountain landscape", "ocean beach",
+      "sunset photo", "night photo", "urban photography", "aerial photo",
+      "dark background", "gradient background", "minimal photo", "vintage photo",
+      "modern architecture", "interior design", "fashion photo", "sports photo",
+      "wildlife photography", "macro photo",
     ],
     "packs": [
       "creative commons pack", "resource pack", "design assets", "mega pack", "sound pack",

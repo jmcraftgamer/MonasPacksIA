@@ -3,7 +3,7 @@ import { searchContent, getCategoryQueries } from "@/lib/content/downloader";
 import { supabaseAdmin } from "@/lib/supabase";
 import { v4 as uuidv4 } from "uuid";
 
-const CATEGORIAS = ["musica", "memes-video", "memes-imagem", "efeitos", "packs"];
+const CATEGORIAS = ["musica", "memes-video", "memes-imagem", "efeitos", "videos", "imagens", "packs"];
 
 export async function GET() {
   const results: Record<string, number> = {};
