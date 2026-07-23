@@ -15,6 +15,7 @@ export async function GET() {
   const promises = CATEGORIAS.map(async (categoria) => {
     let inseridos = 0;
     const queries = getCategoryQueries(categoria);
+    const insertedInRun = new Set<string>();
 
     for (const query of queries) {
       try {
@@ -24,7 +25,7 @@ export async function GET() {
           klipy: process.env.KLIPY_API_KEY,
           epidemic: process.env.EPIDEMIC_API_KEY,
         });
-        inseridos += await insertNew(items, categoria);
+        inseridos += await insertNew(items, categoria, insertedInRun);
       } catch {}
     }
 
@@ -36,34 +37,41 @@ export async function GET() {
   return NextResponse.json({ success: true, results });
 }
 
-async function insertNew(items: { nome: string; url: string; previewUrl: string; origem: string; tipo: string; popularidade: number }[], categoria: string): Promise<number> {
+async function insertNew(items: { nome: string; url: string; previewUrl: string; origem: string; tipo: string; popularidade: number }[], categoria: string, insertedInRun: Set<string>): Promise<number> {
   const urls = items.map((i) => i.url);
   const { data: existing } = await supabaseAdmin.from("produtos").select("download_url").in("download_url", urls);
   const existingUrls = new Set((existing || []).map((r: any) => r.download_url));
 
-  const maxPop = Math.max(...items.map((i) => i.popularidade || 0), 1);
-
   let count = 0;
+  const batch: any[] = [];
+
   for (const item of items) {
     if (existingUrls.has(item.url)) continue;
-    try {
-      const now = Date.now();
-      const pop = item.popularidade || 0;
-      const criadoEm = new Date(now + (pop / maxPop) * 86400000).toISOString();
+    if (insertedInRun.has(item.url)) continue;
 
-      await supabaseAdmin.from("produtos").insert({
-        id: uuidv4(),
-        nome: item.nome || "Item",
-        descricao: `Conteúdo de ${item.origem}`,
-        categoria,
-        subcategoria: categoria,
-        tipo: "unico",
-        imagem: item.previewUrl || item.url || "",
-        download_url: item.url,
-        criado_em: criadoEm,
-      });
-      count++;
-    } catch {}
+    insertedInRun.add(item.url);
+    batch.push({
+      id: uuidv4(),
+      nome: item.nome || "Item",
+      descricao: `Conteúdo de ${item.origem}`,
+      categoria,
+      subcategoria: categoria,
+      tipo: "unico",
+      imagem: item.previewUrl || item.url || "",
+      download_url: item.url,
+    });
+
+    if (batch.length >= 50) {
+      const { error } = await supabaseAdmin.from("produtos").insert(batch);
+      if (!error) count += batch.length;
+      batch.length = 0;
+    }
   }
+
+  if (batch.length > 0) {
+    const { error } = await supabaseAdmin.from("produtos").insert(batch);
+    if (!error) count += batch.length;
+  }
+
   return count;
 }

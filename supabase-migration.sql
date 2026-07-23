@@ -25,6 +25,11 @@ CREATE TABLE IF NOT EXISTS produtos (
 
 ALTER TABLE produtos ADD COLUMN IF NOT EXISTS imagem TEXT DEFAULT '';
 
+-- Remove duplicatas (mantém o registro mais antigo) e adiciona constraint único
+DELETE FROM produtos a USING produtos b
+WHERE a.id > b.id AND a.download_url = b.download_url AND a.download_url != '';
+ALTER TABLE produtos ADD CONSTRAINT unique_download_url UNIQUE (download_url);
+
 -- Tabela de arquivos de packs
 CREATE TABLE IF NOT EXISTS arquivos (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

@@ -5,7 +5,14 @@ export async function getProdutos(categoria?: string, limit = 200, offset = 0): 
   let query = supabaseAdmin.from("produtos").select("*").order("criado_em", { ascending: false });
   if (categoria) query = query.eq("categoria", categoria);
   const { data } = await query.range(offset, offset + limit - 1);
-  return (data || []).map(formatProduto);
+  if (!data) return [];
+  const seen = new Set<string>();
+  return data.filter((item: any) => {
+    const url = item.download_url || "";
+    if (!url || seen.has(url)) return false;
+    seen.add(url);
+    return true;
+  }).map(formatProduto);
 }
 
 export async function getProdutosCount(categoria: string): Promise<number> {
@@ -16,19 +23,7 @@ export async function getProdutosCount(categoria: string): Promise<number> {
 export async function getProduto(id: string): Promise<Produto | null> {
   const { data } = await supabaseAdmin.from("produtos").select("*").eq("id", id).single();
   if (!data) return null;
-  const produto = formatProduto(data);
-
-  if (produto.tipo === "pack") {
-    const { data: arquivos } = await supabaseAdmin
-      .from("arquivos")
-      .select("*")
-      .eq("produto_id", id);
-    if (arquivos && arquivos.length > 0) {
-      produto.arquivos = arquivos.map((a: any) => ({ nome: a.nome, url: a.url }));
-    }
-  }
-
-  return produto;
+  return formatProduto(data);
 }
 
 function formatProduto(raw: any): Produto {
