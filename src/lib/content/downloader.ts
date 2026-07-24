@@ -117,18 +117,14 @@ async function searchKlipy(query: string, type: string, perPage: number, apiKey:
     let results: SearchResult[];
     if (type === "clips") {
       const page = await client.clips.search({ q: query, perPage: Math.min(perPage, 50) });
-      results = (page.data || []).map((item: any) => {
-        const clipF = item.file;
-        const clipBest = clipF?.hd || clipF?.md || clipF?.sm || clipF?.xs || {};
-        return {
-          nome: limparNome(item.title || item.slug || "meme"),
-          url: clipBest.mp4?.url || item.file?.mp4 || item.url,
-          previewUrl: clipBest.webp?.url || clipBest.jpg?.url || clipF?.gif || item.url,
-          origem: "klipy",
-          tipo: "video" as const,
-          popularidade: item.stats?.plays || 0,
-        };
-      });
+      results = (page.data || []).map((item: any) => ({
+        nome: limparNome(item.title || item.slug || "meme"),
+        url: item.file?.mp4 || item.url,
+        previewUrl: item.file?.webp || item.file?.gif || item.url,
+        origem: "klipy",
+        tipo: "video" as const,
+        popularidade: item.stats?.plays || 0,
+      }));
     } else {
       const mediaKey = type === "gifs" ? "gifs" : type === "stickers" ? "stickers" : "memes";
       const clientMethod = client[mediaKey] as any;
